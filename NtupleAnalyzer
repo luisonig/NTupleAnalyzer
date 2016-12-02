@@ -23,6 +23,8 @@ def global_init():
     # ROOT.gSystem.Load("libLHAPDF.so")
     # ROOT.gROOT.LoadMacro("LHAGlue.h+")
     ROOT.gROOT.LoadMacro("TSelectorMain.C+")
+    ROOT.gROOT.LoadMacro("TSelectorAnalyzer.C+")
+    ROOT.gROOT.LoadMacro("TSelectorWrite.C+")
     ROOT.gROOT.LoadMacro("TSelectorReader.C+")
 
 
@@ -35,8 +37,9 @@ def main(filenames):
     # Initialize can compile in ROOT:
     global_init()
 
-    # Define Main selector object:
-    mainSelector = ROOT.TSelectorMain()
+    # Define analyser selector object:
+    AnalyzerSelector = ROOT.TSelectorAnalyzer()
+    ReweightSelector = ROOT.TSelectorWrite()
 
     # We want to handle Ctrl+C
     sh = ROOT.TSignalHandler(ROOT.kSigInterrupt, False)
@@ -45,7 +48,8 @@ def main(filenames):
 
     # Define reader selector and add Main selector to it:
     reader = ROOT.TSelectorReader()
-    reader.addSelector(mainSelector) 
+    reader.addSelector(AnalyzerSelector)
+    reader.addSelector(ReweightSelector)
 
     # Define chain and add file list:
     chain = ROOT.TChain("t3")

@@ -115,41 +115,41 @@ class TSelectorMain
   Int_t           get_nuwgt() const { return *input_nuwgt; }
   const Double_t* orig_usr_wgts() const { return input_usr_wgts; }
   Double_t        orig_usr_wgts(int i) const { return input_usr_wgts[i]; }
-  Int_t           get_alphaspower() const { return Int_t(*input_alphaspower) - opt_extra_alphas; }
+  virtual Int_t   get_alphaspower() const { return Int_t(*input_alphaspower); }
   const Char_t*   get_part() const { return input_part; }
   Char_t          get_part(int i) const { return input_part[i]; }
   
-  void Init(const TSelectorReader* reader);
-  bool Process();
-  void SlaveBegin();
-  void SlaveTerminate();
+  virtual void Init(const TSelectorReader* reader);
+  virtual bool Process();
+  virtual void SlaveBegin();
+  virtual void SlaveTerminate();
   
   TSelectorMain();
   ~TSelectorMain();
   
   //--] NTuple access stuff
   
-  //--[ Analysis stuff:
+  /* //--[ Analysis stuff: */
 
-  typedef std::vector<fastjet::PseudoJet> PseudoJetVector;
-  fastjet::PseudoJet get_vec(int i) const;
+  /* typedef std::vector<fastjet::PseudoJet> PseudoJetVector; */
+  /* fastjet::PseudoJet get_vec(int i) const; */
   
-  void TestAnalysis();
-  void PrintEvent(const PseudoJetVector particles);
+  /* void TestAnalysis(); */
+  /* void PrintEvent(const PseudoJetVector particles); */
   
-  //--] Analysis stuff:
+  /* //--] Analysis stuff: */
 
     
-  //--[ Member variables:
-  int opt_extra_alphas;     // number of extra alphas powers
+  /* //--[ Member variables: */
+  /* int opt_extra_alphas;     // number of extra alphas powers */
 
-  //--] Member variables
+  /* //--] Member variables */
 
 
-  //--[ Reweighting variables:
+  /* //--[ Reweighting variables: */
     
 
-  //--] Reweighting variables
+  /* //--] Reweighting variables */
 
     
   //--[ Counting events:

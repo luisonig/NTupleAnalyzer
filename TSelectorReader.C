@@ -29,18 +29,7 @@
 //TSelectorReader::TSelectorReader(TString filename, TTree * /*tree*/) : fChain(0)
 TSelectorReader::TSelectorReader(TTree * /*tree*/) : fChain(0)
 {
-  // if parameter tree is not specified (or zero), connect the file
-  // used to generate this class and read the Tree.
 
-  // if (tree == 0) {
-  //    TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject(filename);
-  //    if (!f || !f->IsOpen()) {
-  // 	f = new TFile(filename);
-  //    }
-  //    f->GetObject("t3",tree);
-  
-  // }
-  // Init(tree);
 }
 
 TSelectorReader::~TSelectorReader()

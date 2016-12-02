@@ -17,7 +17,7 @@ TSelectorMain::TSelectorMain()
 {
 
   // extra alphas powers settings
-  opt_extra_alphas = 0;
+  //opt_extra_alphas = 0;
 
 }
 
@@ -67,7 +67,7 @@ void TSelectorMain::Init(const TSelectorReader* reader)
 bool TSelectorMain::Process()
 {
  
-  TestAnalysis();
+  //TestAnalysis();
 
   return true;
 }
@@ -86,75 +86,75 @@ void TSelectorMain::SlaveTerminate()
 }
 
 
-void TSelectorMain::TestAnalysis()
-{
+// void TSelectorMain::TestAnalysis()
+// {
   
-  // ALPHAS
-  //const std::string pdfset("CT10nlo");
-  //LHAPDF::initPDFSet(11000, pdfset, 0);
+//   // ALPHAS
+//   //const std::string pdfset("CT10nlo");
+//   //LHAPDF::initPDFSet(11000, pdfset, 0);
   
-  PseudoJetVector particles;
-  //fastjet::PseudoJet Hmom;
-  //PseudoJetVector partons;
+//   PseudoJetVector particles;
+//   //fastjet::PseudoJet Hmom;
+//   //PseudoJetVector partons;
   
-  Double_t Etot = 0.0;
+//   Double_t Etot = 0.0;
   
-  for (Int_t j=0; j<get_nparticle(); j++) {
-    Etot+=get_E(j);
-  }
+//   for (Int_t j=0; j<get_nparticle(); j++) {
+//     Etot+=get_E(j);
+//   }
   
-  fastjet::PseudoJet vec1 = fastjet::PseudoJet(0., 0., get_x1()*Etot/(get_x1()+get_x2()), get_x1()*Etot/(get_x1()+get_x2()));
-  vec1.set_user_index(get_id1());
-  fastjet::PseudoJet vec2 = fastjet::PseudoJet(0., 0.,-get_x2()*Etot/(get_x1()+get_x2()), get_x2()*Etot/(get_x1()+get_x2()));
-  vec2.set_user_index(get_id2());
-  particles.push_back(vec1);
-  particles.push_back(vec2);
+//   fastjet::PseudoJet vec1 = fastjet::PseudoJet(0., 0., get_x1()*Etot/(get_x1()+get_x2()), get_x1()*Etot/(get_x1()+get_x2()));
+//   vec1.set_user_index(get_id1());
+//   fastjet::PseudoJet vec2 = fastjet::PseudoJet(0., 0.,-get_x2()*Etot/(get_x1()+get_x2()), get_x2()*Etot/(get_x1()+get_x2()));
+//   vec2.set_user_index(get_id2());
+//   particles.push_back(vec1);
+//   particles.push_back(vec2);
   
-  // Create and fill particle kinematic arrays:
-  for (Int_t i=0; i<get_nparticle(); i++){
+//   // Create and fill particle kinematic arrays:
+//   for (Int_t i=0; i<get_nparticle(); i++){
     
-    fastjet::PseudoJet vec = fastjet::PseudoJet(get_px(i), get_py(i), get_pz(i), get_E(i));
-    vec.set_user_index(get_kf(i));
-    particles.push_back(vec);
-  }
+//     fastjet::PseudoJet vec = fastjet::PseudoJet(get_px(i), get_py(i), get_pz(i), get_E(i));
+//     vec.set_user_index(get_kf(i));
+//     particles.push_back(vec);
+//   }
   
-  PrintEvent(particles); 
+//   PrintEvent(particles); 
 
- //  NOT NEEDED HERE, BUT KEEP JUST IN CASE: //
+//  //  NOT NEEDED HERE, BUT KEEP JUST IN CASE: //
  
- /*  std::map<subprocess, int>::iterator it;
-     it = h2jsubprocesses.find(flav);
-     if ( it != h2jsubprocesses.end()){
-     if(debug) std::cout<<"subprocess = "<<h2jsubprocesses[flav]<<std::endl;
-     }
-     else {
-     std::cerr<<"ERROR SUBPROCESS NOT FOUND!\n---> "
-     <<flav[0]<<" "<<flav[1]<<" -> "
-     <<flav[2]<<" "<<flav[3]<<" "<<flav[4]<<" "<<flav[5]<<std::endl;
-     return;
-     }
- */
+//  /*  std::map<subprocess, int>::iterator it;
+//      it = h2jsubprocesses.find(flav);
+//      if ( it != h2jsubprocesses.end()){
+//      if(debug) std::cout<<"subprocess = "<<h2jsubprocesses[flav]<<std::endl;
+//      }
+//      else {
+//      std::cerr<<"ERROR SUBPROCESS NOT FOUND!\n---> "
+//      <<flav[0]<<" "<<flav[1]<<" -> "
+//      <<flav[2]<<" "<<flav[3]<<" "<<flav[4]<<" "<<flav[5]<<std::endl;
+//      return;
+//      }
+//  */
 
-}
+// }
 
 
-void TSelectorMain::PrintEvent(PseudoJetVector particles)
-{
-  cout.precision(15);
-  cout.setf(ios::scientific, ios::floatfield); 
+// void TSelectorMain::PrintEvent(PseudoJetVector particles)
+// {
+//   cout.precision(15);
+//   cout.setf(ios::scientific, ios::floatfield); 
 
-  std::cout<<"--------------------\n";
-  std::cout<<"proc = "
-	   <<particles[0].user_index()<<" "<<particles[1].user_index()<<" -> ";
-  for(unsigned i=2; i<particles.size(); i++){
-    std::cout<<particles[i].user_index()<<" ";
-  }
-  std::cout<<std::endl;
-  for(unsigned i=0; i<particles.size(); i++){
-    std::cout<<particles[i].E() <<"\t"
-	     <<particles[i].px()<<"\t"
-	     <<particles[i].py()<<"\t"
-	     <<particles[i].pz()<<";\t m="
-	     <<particles[i].m()<<std::endl;
-  }
-}
+//   std::cout<<"--------------------\n";
+//   std::cout<<"proc = "
+// 	   <<particles[0].user_index()<<" "<<particles[1].user_index()<<" -> ";
+//   for(unsigned i=2; i<particles.size(); i++){
+//     std::cout<<particles[i].user_index()<<" ";
+//   }
+//   std::cout<<std::endl;
+//   for(unsigned i=0; i<particles.size(); i++){
+//     std::cout<<particles[i].E() <<"\t"
+// 	     <<particles[i].px()<<"\t"
+// 	     <<particles[i].py()<<"\t"
+// 	     <<particles[i].pz()<<";\t m="
+// 	     <<particles[i].m()<<std::endl;
+//   }
+// }
