@@ -1,6 +1,7 @@
 #ifndef TSELECTOR_WRITE_H
 #define TSELECTOR_WRITE_H
 
+#include <TFile.h>
 #include <fastjet/ClusterSequence.hh>
 #include "TSelectorMain.h"
 
@@ -26,7 +27,6 @@ class TSelectorWrite : public TSelectorMain
   Double_t        n_weight2;
   Double_t        n_me_wgt;
   Double_t        n_me_wgt2;
-  Double_t        n_kfac;
   Double_t        n_x1;
   Double_t        n_x2;
   Double_t        n_x1p;
@@ -57,7 +57,6 @@ class TSelectorWrite : public TSelectorMain
   TBranch        *nb_weight2;     //!
   TBranch        *nb_me_wgt;      //!
   TBranch        *nb_me_wgt2;     //!
-  TBranch        *nb_kfac;        //!
   TBranch        *nb_x1;          //!
   TBranch        *nb_x2;          //!
   TBranch        *nb_x1p;         //!
@@ -90,8 +89,13 @@ class TSelectorWrite : public TSelectorMain
   typedef std::vector<fastjet::PseudoJet> PseudoJetVector;
   fastjet::PseudoJet get_vec(int i) const;
 
+  TString* filename;
+  TFile* outputfile;
+
   void TestReweighting();
   void PrintEvent(PseudoJetVector particles);
+
+  void CopyEvent();
 
   //--] Reweighting stuff
 

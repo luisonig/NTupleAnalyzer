@@ -43,6 +43,7 @@ void TSelectorWrite::Init(const TSelectorReader* reader)
   input_E_f  = &reader->E_f[0];
   input_alphas = &reader->alphas;
   input_kf = &reader->kf[0];
+  input_ps_wgt = &reader->ps_wgt;
   input_weight = &reader->weight;
   input_weight2 = &reader->weight2;
   input_me_wgt = &reader->me_wgt;
@@ -165,6 +166,56 @@ void TSelectorWrite::TestReweighting()
  */
 
 }
+
+void TSelectorWrite::CopyEvent()
+{
+  
+  n_id = *input_id;
+  n_nparticle = *input_nparticle;
+  n_ncount = *input_ncount;
+
+  for (int i=0; i< n_nparticle; i++){
+    n_px[i] = input_px[i];
+    n_py[i] = input_py[i];
+    n_pz[i] = input_pz[i];
+    n_E[i]  = input_E[i];
+    n_kf[i] = input_kf[i];
+  }
+
+  n_alphas = *input_alphas;
+  n_ps_wgt = *input_ps_wgt;
+  n_weight = *input_weight;
+  n_weight2 = *input_weight2;
+  n_me_wgt = *input_me_wgt;
+  n_me_wgt2 = *input_me_wgt2;   
+  n_x1 = *input_x1;
+  n_x2 = *input_x2;
+  n_x1p = *input_x1p;
+  n_x2p = *input_x2p;
+  n_id1 = *input_id1;
+  n_id2 = *input_id2;
+  n_id1p = *input_id1p;
+  n_id2p = *input_id2p;
+  n_fac_scale = *input_fac_scale;
+  n_ren_scale = *input_ren_scale;
+  n_nuwgt = *input_nuwgt;
+
+  for (int i=0; i<n_nuwgt; i++){
+    n_usr_wgts[i] = input_usr_wgts[i];  //[nuwgt]
+  }
+  n_alphaspower = *input_alphaspower;
+ 
+  for (int i=0; i<2; i++){
+    n_part[i] = input_part[i];
+  }
+}
+
+
+// void TSelectorWrite::Reweight()
+// {
+
+
+// }
 
 
 void TSelectorWrite::PrintEvent(PseudoJetVector particles)

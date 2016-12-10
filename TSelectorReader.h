@@ -42,7 +42,6 @@ class TSelectorReader : public TSelector
   Double_t        weight2;
   Double_t        me_wgt;
   Double_t        me_wgt2;
-  Double_t        kfac;               // new
   Double_t        x1;
   Double_t        x2;
   Double_t        x1p;
@@ -75,7 +74,6 @@ class TSelectorReader : public TSelector
   TBranch        *b_weight2;     //!
   TBranch        *b_me_wgt;      //!
   TBranch        *b_me_wgt2;     //!
-  TBranch        *b_kfac;        //!
   TBranch        *b_x1;          //!
   TBranch        *b_x2;          //!
   TBranch        *b_x1p;         //!
