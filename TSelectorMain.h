@@ -9,7 +9,7 @@ class TSelectorReader;
 class TSelectorMain
 {
  public :
-  
+
   //--[ NTuple access stuff:
   // Declaration of leaf types
   const Int_t*       input_id;
@@ -45,14 +45,14 @@ class TSelectorMain
   const Double_t*    input_usr_wgts;   //[nuwgt]
   const Char_t*      input_part;
   const Char_t*      input_alphaspower;
-  
+
   // NTuples type
   const Bool_t*      input_ed_ntuples;
-  
+
   // Accessor methods
   Int_t get_event_id() const { return *input_id; }
   Int_t get_nparticle() const { return *input_nparticle; }
-  Int_t get_ncount() const { 
+  Int_t get_ncount() const {
     if(*(input_ed_ntuples)){
       return *input_ncount;
     }
@@ -118,28 +118,32 @@ class TSelectorMain
   virtual Int_t   get_alphaspower() const { return Int_t(*input_alphaspower); }
   const Char_t*   get_part() const { return input_part; }
   Char_t          get_part(int i) const { return input_part[i]; }
-  
+
+  const Char_t* originfile;
+
+  virtual int  Type();
+  virtual void Notify();
   virtual void Init(const TSelectorReader* reader);
   virtual bool Process();
   virtual void SlaveBegin();
   virtual void SlaveTerminate();
-  
+
   TSelectorMain();
   ~TSelectorMain();
-  
+
   //--] NTuple access stuff
-  
+
   /* //--[ Analysis stuff: */
 
   /* typedef std::vector<fastjet::PseudoJet> PseudoJetVector; */
   /* fastjet::PseudoJet get_vec(int i) const; */
-  
+
   /* void TestAnalysis(); */
   /* void PrintEvent(const PseudoJetVector particles); */
-  
+
   /* //--] Analysis stuff: */
 
-    
+
   /* //--[ Member variables: */
   /* int opt_extra_alphas;     // number of extra alphas powers */
 
@@ -147,11 +151,11 @@ class TSelectorMain
 
 
   /* //--[ Reweighting variables: */
-    
+
 
   /* //--] Reweighting variables */
 
-    
+
   //--[ Counting events:
   Int_t event_prev_id;
   long  event_groups;

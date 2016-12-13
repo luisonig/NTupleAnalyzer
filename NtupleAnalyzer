@@ -19,6 +19,11 @@ def global_init():
         pass
     import ROOT
 
+    ROOT.gSystem.Load("libRIO.so")
+    ROOT.gSystem.Load("libTreePlayer.so")
+    ROOT.gPluginMgr.AddHandler("TVirtualStreamerInfo", "*", "TStreamerInfo", "RIO", "TStreamerInfo()")
+    ROOT.gPluginMgr.AddHandler("TVirtualTreePlayer", "*", "TTreePlayer", "TreePlayer", "TTreePlayer()");
+
     ROOT.gSystem.Load("libfastjet.so")
     # ROOT.gSystem.Load("libLHAPDF.so")
     # ROOT.gROOT.LoadMacro("LHAGlue.h+")
@@ -37,29 +42,52 @@ def main(filenames):
     # Initialize can compile in ROOT:
     global_init()
 
-    # Define analyser selector object:
-    AnalyzerSelector = ROOT.TSelectorAnalyzer()
-    ReweightSelector = ROOT.TSelectorWrite()
-
     # We want to handle Ctrl+C
     sh = ROOT.TSignalHandler(ROOT.kSigInterrupt, False)
     sh.Add()
     sh.Connect("Notified()", "TROOT", ROOT.gROOT, "SetInterrupt()")
 
-    # Define reader selector and add Main selector to it:
-    reader = ROOT.TSelectorReader()
-    reader.addSelector(AnalyzerSelector)
-    reader.addSelector(ReweightSelector)
 
-    # Define chain and add file list:
-    chain = ROOT.TChain("t3")
+    # #// Define reader selector:
+    # an_reader = ROOT.TSelectorReader()
+
+    # #// Analysis Selectors:
+    # AnalyzerSelector = ROOT.TSelectorAnalyzer()
+    # an_reader.addSelector(AnalyzerSelector)
+
+    # #// Define chain and add file list:
+    # chain = ROOT.TChain("t3")
+    # for name in filenames:
+    #     chain.Add(name)
+
+    # #// Start processing the chain:
+    # chain.GetFile()  # force opening of the first file
+    # chain.SetMaxEntryLoop(2**60)
+    # chain.Process(an_reader, "", chain.GetMaxEntryLoop(), 0)
+
+
+    # *****************************************************
+    #// If need to reweight we need a chain for every file:
+    # *****************************************************
+
     for name in filenames:
-        chain.Add(name)
 
-    # Start processing the chain:
-    chain.GetFile()  # force opening of the first file
-    chain.SetMaxEntryLoop(2**60)
-    chain.Process(reader, "", chain.GetMaxEntryLoop(), 0)
+        #// Define reader selector:
+        rw_reader = ROOT.TSelectorReader()
+
+        #// -- Reweight Selectors:
+        ReweightSelector = ROOT.TSelectorWrite()
+        ReweightSelector.SetFileName(name)
+        rw_reader.addSelector(ReweightSelector)
+
+        rw_chain = ROOT.TChain("t3")
+        rw_chain.Add(name)
+
+        #// Start processing the chain:
+        rw_chain.GetFile()  # force opening of the first file
+        rw_chain.SetMaxEntryLoop(2**60)
+        rw_chain.Process(rw_reader, "", rw_chain.GetMaxEntryLoop(), 0)
+
 
 
     print "Run time: %d seconds" % (time.time() - start_time)

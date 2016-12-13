@@ -29,6 +29,11 @@ TSelectorAnalyzer::~TSelectorAnalyzer()
   // }
 }
 
+int TSelectorAnalyzer::Type()
+{
+  return 1;
+}
+
 void TSelectorAnalyzer::Init(const TSelectorReader* reader)
 {
   input_ed_ntuples = &reader->ed_ntuples;
@@ -63,10 +68,14 @@ void TSelectorAnalyzer::Init(const TSelectorReader* reader)
   input_part = &reader->part[0];
 }
 
+void TSelectorAnalyzer::Notify()
+{
+  return;
+}
 
 bool TSelectorAnalyzer::Process()
 {
- 
+
   TestAnalysis();
 
   return true;
@@ -88,7 +97,7 @@ void TSelectorAnalyzer::SlaveTerminate()
 
 void TSelectorAnalyzer::TestAnalysis()
 {
-  
+
   // ALPHAS
   //const std::string pdfset("CT10nlo");
   //LHAPDF::initPDFSet(11000, pdfset, 0);
@@ -96,32 +105,32 @@ void TSelectorAnalyzer::TestAnalysis()
   PseudoJetVector particles;
   //fastjet::PseudoJet Hmom;
   //PseudoJetVector partons;
-  
+
   Double_t Etot = 0.0;
-  
+
   for (Int_t j=0; j<get_nparticle(); j++) {
     Etot+=get_E(j);
   }
-  
+
   fastjet::PseudoJet vec1 = fastjet::PseudoJet(0., 0., get_x1()*Etot/(get_x1()+get_x2()), get_x1()*Etot/(get_x1()+get_x2()));
   vec1.set_user_index(get_id1());
   fastjet::PseudoJet vec2 = fastjet::PseudoJet(0., 0.,-get_x2()*Etot/(get_x1()+get_x2()), get_x2()*Etot/(get_x1()+get_x2()));
   vec2.set_user_index(get_id2());
   particles.push_back(vec1);
   particles.push_back(vec2);
-  
+
   // Create and fill particle kinematic arrays:
   for (Int_t i=0; i<get_nparticle(); i++){
-    
+
     fastjet::PseudoJet vec = fastjet::PseudoJet(get_px(i), get_py(i), get_pz(i), get_E(i));
     vec.set_user_index(get_kf(i));
     particles.push_back(vec);
   }
-  
-  PrintEvent(particles); 
+
+  PrintEvent(particles);
 
  //  NOT NEEDED HERE, BUT KEEP JUST IN CASE: //
- 
+
  /*  std::map<subprocess, int>::iterator it;
      it = h2jsubprocesses.find(flav);
      if ( it != h2jsubprocesses.end()){
@@ -141,7 +150,7 @@ void TSelectorAnalyzer::TestAnalysis()
 void TSelectorAnalyzer::PrintEvent(PseudoJetVector particles)
 {
   cout.precision(15);
-  cout.setf(ios::scientific, ios::floatfield); 
+  cout.setf(ios::scientific, ios::floatfield);
 
   std::cout<<"--------------------\n";
   std::cout<<"proc = "

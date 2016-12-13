@@ -1,6 +1,7 @@
 #ifndef TSELECTOR_WRITE_H
 #define TSELECTOR_WRITE_H
 
+#include <string>
 #include <TFile.h>
 #include <fastjet/ClusterSequence.hh>
 #include "TSelectorMain.h"
@@ -71,14 +72,16 @@ class TSelectorWrite : public TSelectorMain
   TBranch        *nb_usr_wgts;    //!
   TBranch        *nb_alphaspower; //!
   TBranch        *nb_part;        //!
-  
+
   //--[ Overridable methods:
-  
+
+  int  Type();
+  void Notify();
   void Init(const TSelectorReader* reader);
   bool Process();
   void SlaveBegin();
   void SlaveTerminate();
-  
+
   TSelectorWrite();
   ~TSelectorWrite();
 
@@ -89,7 +92,8 @@ class TSelectorWrite : public TSelectorMain
   typedef std::vector<fastjet::PseudoJet> PseudoJetVector;
   fastjet::PseudoJet get_vec(int i) const;
 
-  TString* filename;
+  void SetFileName(string filename);
+  string outfilename;
   TFile* outputfile;
 
   void TestReweighting();

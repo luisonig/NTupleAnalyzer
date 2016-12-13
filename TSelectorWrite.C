@@ -1,4 +1,5 @@
 #include <fstream>
+#include <string>
 #ifndef NDEBUG
   #include <iostream>
 #endif
@@ -13,19 +14,29 @@
 
 TSelectorWrite::TSelectorWrite()
 {
-
-  // extra alphas powers settings
-  //opt_extra_alphas = 0;
-
+  std::cout<<"*************************************"<<std::endl;
+  std::cout<<"*** REWEIGHTING SELECTOR SELECTED ***"<<std::endl;
+  std::cout<<"*************************************"<<std::endl;
 }
 
 TSelectorWrite::~TSelectorWrite()
 {
-  // if (analysis) {
-  //   delete analysis;
-  //   analysis = 0;
-  // }
+//
 }
+
+int TSelectorWrite::Type()
+{
+  return 2;
+}
+
+void TSelectorWrite::SetFileName(string name)
+{
+  outfilename=name.substr(0, name.size()-5)+"_new.root";
+  std::cout<<"Reweighted events save in file: ";
+  std::cout<<outfilename<<std::endl;
+  return;
+}
+
 
 void TSelectorWrite::Init(const TSelectorReader* reader)
 {
@@ -61,6 +72,8 @@ void TSelectorWrite::Init(const TSelectorReader* reader)
   input_alphaspower = &reader->alphaspower;
   input_part = &reader->part[0];
 
+  outputfile  = new TFile(outfilename.c_str(),"recreate");
+
   n_fChain = new TTree("t3","Reweighted Ntuple");
   n_fChain->Branch("id", &n_id, "id/I");
   n_fChain->Branch("nparticle", &n_nparticle, "nparticle/I");
@@ -90,14 +103,19 @@ void TSelectorWrite::Init(const TSelectorReader* reader)
   n_fChain->Branch("usr_wgts", &n_usr_wgts, "usr_wgts[nuwgt]/D");
   n_fChain->Branch("alphasPower", &n_alphaspower, "alphasPower/B");
   n_fChain->Branch("part", n_part, "part[2]/C");
-
 }
 
 
+void TSelectorWrite::Notify()
+{
+  return;
+}
+
 bool TSelectorWrite::Process()
 {
- 
+
   TestReweighting();
+  CopyEvent();
 
   return true;
 }
@@ -112,13 +130,15 @@ void TSelectorWrite::SlaveTerminate()
   // The SlaveTerminate() function is called after all entries or objects
   // have been processed.
 
+  outputfile->Write();
+  outputfile->Close();
   //analysis->analysis_finalize(this);
 }
 
 
 void TSelectorWrite::TestReweighting()
 {
-  
+
   // ALPHAS
   //const std::string pdfset("CT10nlo");
   //LHAPDF::initPDFSet(11000, pdfset, 0);
@@ -126,32 +146,32 @@ void TSelectorWrite::TestReweighting()
   PseudoJetVector particles;
   //fastjet::PseudoJet Hmom;
   //PseudoJetVector partons;
-  
+
   Double_t Etot = 0.0;
-  
+
   for (Int_t j=0; j<get_nparticle(); j++) {
     Etot+=get_E(j);
   }
-  
+
   fastjet::PseudoJet vec1 = fastjet::PseudoJet(0., 0., get_x1()*Etot/(get_x1()+get_x2()), get_x1()*Etot/(get_x1()+get_x2()));
   vec1.set_user_index(get_id1());
   fastjet::PseudoJet vec2 = fastjet::PseudoJet(0., 0.,-get_x2()*Etot/(get_x1()+get_x2()), get_x2()*Etot/(get_x1()+get_x2()));
   vec2.set_user_index(get_id2());
   particles.push_back(vec1);
   particles.push_back(vec2);
-  
+
   // Create and fill particle kinematic arrays:
   for (Int_t i=0; i<get_nparticle(); i++){
-    
+
     fastjet::PseudoJet vec = fastjet::PseudoJet(get_px(i), get_py(i), get_pz(i), get_E(i));
     vec.set_user_index(get_kf(i));
     particles.push_back(vec);
   }
-  
-  PrintEvent(particles); 
+
+  PrintEvent(particles);
 
  //  NOT NEEDED HERE, BUT KEEP JUST IN CASE: //
- 
+
  /*  std::map<subprocess, int>::iterator it;
      it = h2jsubprocesses.find(flav);
      if ( it != h2jsubprocesses.end()){
@@ -169,7 +189,7 @@ void TSelectorWrite::TestReweighting()
 
 void TSelectorWrite::CopyEvent()
 {
-  
+
   n_id = *input_id;
   n_nparticle = *input_nparticle;
   n_ncount = *input_ncount;
@@ -187,15 +207,13 @@ void TSelectorWrite::CopyEvent()
   n_weight = *input_weight;
   n_weight2 = *input_weight2;
   n_me_wgt = *input_me_wgt;
-  n_me_wgt2 = *input_me_wgt2;   
+  n_me_wgt2 = *input_me_wgt2;
   n_x1 = *input_x1;
   n_x2 = *input_x2;
   n_x1p = *input_x1p;
   n_x2p = *input_x2p;
   n_id1 = *input_id1;
   n_id2 = *input_id2;
-  n_id1p = *input_id1p;
-  n_id2p = *input_id2p;
   n_fac_scale = *input_fac_scale;
   n_ren_scale = *input_ren_scale;
   n_nuwgt = *input_nuwgt;
@@ -204,12 +222,15 @@ void TSelectorWrite::CopyEvent()
     n_usr_wgts[i] = input_usr_wgts[i];  //[nuwgt]
   }
   n_alphaspower = *input_alphaspower;
- 
+
   for (int i=0; i<2; i++){
     n_part[i] = input_part[i];
   }
-}
 
+  n_fChain->Fill();
+
+  return;
+}
 
 // void TSelectorWrite::Reweight()
 // {
@@ -221,7 +242,7 @@ void TSelectorWrite::CopyEvent()
 void TSelectorWrite::PrintEvent(PseudoJetVector particles)
 {
   cout.precision(15);
-  cout.setf(ios::scientific, ios::floatfield); 
+  cout.setf(ios::scientific, ios::floatfield);
 
   std::cout<<"--------------------\n";
   std::cout<<"proc = "

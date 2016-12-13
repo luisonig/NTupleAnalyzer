@@ -25,8 +25,6 @@
 //#include "LHAGlue.h"
 
 
-
-//TSelectorReader::TSelectorReader(TString filename, TTree * /*tree*/) : fChain(0)
 TSelectorReader::TSelectorReader(TTree * /*tree*/) : fChain(0)
 {
 
@@ -40,13 +38,13 @@ TSelectorReader::~TSelectorReader()
 
 void TSelectorReader::Init(TTree *tree)
 {
-  
+
   std::cout<<"--> Init Reader:"<<std::endl;
-  
-  if (!tree) return; 
+
+  if (!tree) return;
   fChain = tree;
   fChain->SetMakeClass(1);
-  
+
   fChain->SetBranchAddress("id", &id, &b_id);
   fChain->SetBranchAddress("nparticle", &nparticle, &b_nparticle);
   ncount = 1;
@@ -111,9 +109,15 @@ Bool_t TSelectorReader::Notify()
    // is started when using PROOF. It is normally not necessary to make changes
    // to the generated code, but the routine can be extended by the
    // user if needed. The return value is currently not used.
-  
+
   if (fChain && fChain->GetCurrentFile()) {
     std::cout << "File: " << fChain->GetCurrentFile()->GetName() << std::endl;
+
+    for (unsigned i = 0; i < selectors.size(); i++) {
+      // std::cout<<"Processing selector of type:"<<selectors[i]->Type()<<std::endl;
+      // selectors[i]->originfile=fChain->GetCurrentFile()->GetName();
+      // selectors[i]->Notify();
+    }
   }
 
   return kTRUE;
@@ -207,4 +211,3 @@ void TSelectorReader::addSelector(TSelectorMain* selector)
   selector->Init(this);
   selectors.push_back(selector);
 }
-
