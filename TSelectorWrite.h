@@ -92,16 +92,59 @@ class TSelectorWrite : public TSelectorMain
   typedef std::vector<fastjet::PseudoJet> PseudoJetVector;
   fastjet::PseudoJet get_vec(int i) const;
 
-  void SetFileName(string filename);
+  typedef std::array<int, 4> SubProcessto2;
+  typedef std::array<int, 5> SubProcessto3;
+  typedef std::array<int, 6> SubProcessto4;;
+
+  bool debug;
+
+  void SetFileName(string name, string suffix="_new");
   string outfilename;
   TFile* outputfile;
 
+  void PrepareEvent();
+
+  int  InitializeOLP();
+  void Reweight();
+  
+  void CopyEvent(bool fillchain);
   void TestReweighting();
   void PrintEvent(PseudoJetVector particles);
-
-  void CopyEvent();
+  void FinalizeStat();
+  int  CheckPoint(double heft_wgt, double full_wgt);
 
   //--] Reweighting stuff
+
+  //--[ Physical parameters:
+
+  const double pi = 3.141592653589793;
+
+  // Input parameters are VEV, mZ and alpha:
+  double mZ;
+  double alpha;
+  double vev;
+  double mT;
+  double mB;
+  double mBMS;
+
+  // Derived parameters:
+  double e2;
+  double mW;
+  double sw;
+
+  void SetParameters(double mt=172.3, double mb=4.75, double mbms=3.38);
+
+  //--] Physical parameters
+
+  //--[ Process Specific
+
+  // H+1jet:
+  void FillSubProcessMap_h1j();
+  std::map<SubProcessto2, int> h1j_SubProcesses;
+
+  // H+2jets:
+
+  //--] Process Specific
 
 };
 

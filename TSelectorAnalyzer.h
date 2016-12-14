@@ -48,15 +48,6 @@ class TSelectorAnalyzer : public TSelectorMain
 
   //--] Reweighting variables
 
-
-  //--[ Counting events:
-    Int_t event_prev_id;
-    long  event_groups;
-    double event_trials;
-    bool new_event;
-  //--] Counting events
-
-
 };
 
 #endif

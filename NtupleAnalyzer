@@ -18,6 +18,15 @@ def global_init():
     except NameError:
         pass
     import ROOT
+    
+    noolp = False
+
+    if noolp:
+        ROOT.gSystem.AddIncludePath("-DDISABLE_OLP")
+
+    else:
+        ROOT.gSystem.Load("libgolem_olp_heft.so")
+        ROOT.gSystem.Load("libgolem_olp_full.so")
 
     ROOT.gSystem.Load("libRIO.so")
     ROOT.gSystem.Load("libTreePlayer.so")
@@ -31,6 +40,8 @@ def global_init():
     ROOT.gROOT.LoadMacro("TSelectorAnalyzer.C+")
     ROOT.gROOT.LoadMacro("TSelectorWrite.C+")
     ROOT.gROOT.LoadMacro("TSelectorReader.C+")
+
+
 
 
 
@@ -77,7 +88,9 @@ def main(filenames):
 
         #// -- Reweight Selectors:
         ReweightSelector = ROOT.TSelectorWrite()
-        ReweightSelector.SetFileName(name)
+        ReweightSelector.debug=False
+        ReweightSelector.SetFileName(name,"_mt172_mb0.0")
+        ReweightSelector.SetParameters(172.3,0.0,0.0)
         rw_reader.addSelector(ReweightSelector)
 
         rw_chain = ROOT.TChain("t3")
@@ -87,6 +100,7 @@ def main(filenames):
         rw_chain.GetFile()  # force opening of the first file
         rw_chain.SetMaxEntryLoop(2**60)
         rw_chain.Process(rw_reader, "", rw_chain.GetMaxEntryLoop(), 0)
+        #rw_chain.Process(rw_reader, "", 10, 0)
 
 
 

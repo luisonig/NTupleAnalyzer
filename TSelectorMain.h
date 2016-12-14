@@ -163,7 +163,6 @@ class TSelectorMain
   bool new_event;
   //--] Counting events
 
-
 };
 
 #endif

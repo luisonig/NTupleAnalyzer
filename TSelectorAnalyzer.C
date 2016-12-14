@@ -12,8 +12,8 @@
 // --------------------------------------------------------------------------- //
 
 TSelectorAnalyzer::TSelectorAnalyzer()
-  : event_prev_id(-1), event_groups(0),
-    event_trials(1), new_event(1)
+//  : event_prev_id(-1), event_groups(0),
+//    event_trials(1), new_event(1)
 {
 
   // extra alphas powers settings
