@@ -2,4 +2,4 @@
 
 rm -fr *.pcm
 rm -fr *.d
-rm -fr *.so
+rm -fr T*.so

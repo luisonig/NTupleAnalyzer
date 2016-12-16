@@ -120,9 +120,10 @@ class TSelectorWrite : public TSelectorMain
   const double pi = 3.141592653589793;
 
   // Input parameters are VEV, mZ and alpha:
-  double mZ;
   double alpha;
   double vev;
+  double Nf;
+  double mZ;
   double mT;
   double mB;
   double mBMS;
@@ -132,7 +133,7 @@ class TSelectorWrite : public TSelectorMain
   double mW;
   double sw;
 
-  void SetParameters(double mt=172.3, double mb=4.75, double mbms=3.38);
+  void SetParameters(double nf=4, double mt=172.3, double mb=4.75, double mbms=3.38);
 
   //--] Physical parameters
 

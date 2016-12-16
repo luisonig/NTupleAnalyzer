@@ -48,11 +48,12 @@ void TSelectorWrite::SetFileName(string name, string suffix)
   return;
 }
 
-void TSelectorWrite::SetParameters(double mt, double mb, double mbms)
+void TSelectorWrite::SetParameters(double nf, double mt, double mb, double mbms)
 {
   // Input parameters are VEV, mZ and alpha:
   alpha = 1./128.802223294837; // As computed in Sherpa
   vev   = 246.;
+  Nf    = nf; 
   mZ    = 91.1876;
   mT    = mt;
   mB    = mb;
@@ -215,17 +216,20 @@ int TSelectorWrite::InitializeOLP()
   ss<<fixed<<setprecision(12)<<mBMS;
   const string mBMS_str = "mBMS=" + ss.str();
 
+  ss.str(std::string());
+  ss<<fixed<<setprecision(12)<<Nf;
+  const string Nf_str = "Nf=" + ss.str();
+
+
 #ifndef DISABLE_OLP
   heft_OLP_Option(mZ_str.c_str(), &ierr);
   heft_OLP_Option(mW_str.c_str(), &ierr);
-  //heft_OLP_Option(sw_str.c_str(), &ierr);  
   heft_OLP_Option(mT_str.c_str(), &ierr);    
-  //heft_OLP_Option(mB_str.c_str(), &ierr); 
   heft_OLP_Option(mBMS_str.c_str(), &ierr);
   
+  full_OLP_Option(Nf_str.c_str(), &ierr);  
   full_OLP_Option(mZ_str.c_str(), &ierr);
   full_OLP_Option(mW_str.c_str(), &ierr);
-  //full_OLP_Option(sw_str.c_str(), &ierr);  
   full_OLP_Option(mT_str.c_str(), &ierr);    
   full_OLP_Option(mB_str.c_str(), &ierr); 
   full_OLP_Option(mBMS_str.c_str(), &ierr);
