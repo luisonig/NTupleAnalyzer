@@ -7,6 +7,7 @@ import imp
 import glob
 import time
 import subprocess
+import argparse
 
 
 def global_init():
@@ -45,7 +46,7 @@ def global_init():
 
 
 
-def main(filenames):
+def main(param):
 
     # Store starting time:
     start_time = time.time()
@@ -58,50 +59,67 @@ def main(filenames):
     sh.Add()
     sh.Connect("Notified()", "TROOT", ROOT.gROOT, "SetInterrupt()")
 
-
-    # #// Define reader selector:
-    # an_reader = ROOT.TSelectorReader()
-
-    # #// Analysis Selectors:
-    # AnalyzerSelector = ROOT.TSelectorAnalyzer()
-    # an_reader.addSelector(AnalyzerSelector)
-
-    # #// Define chain and add file list:
-    # chain = ROOT.TChain("t3")
-    # for name in filenames:
-    #     chain.Add(name)
-
-    # #// Start processing the chain:
-    # chain.GetFile()  # force opening of the first file
-    # chain.SetMaxEntryLoop(2**60)
-    # chain.Process(an_reader, "", chain.GetMaxEntryLoop(), 0)
-
-
     # *****************************************************
-    #// If need to reweight we need a chain for every file:
+    #// Perform analysis of NTuples:
     # *****************************************************
 
-    for name in filenames:
+    if param.mode == 'analysis':
 
         #// Define reader selector:
-        rw_reader = ROOT.TSelectorReader()
+        an_reader = ROOT.TSelectorReader()
 
-        #// -- Reweight Selectors:
-        ReweightSelector = ROOT.TSelectorWrite()
-        ReweightSelector.debug=False
-        ReweightSelector.SetFileName(name,"_mt172_mb0.0")
-        ReweightSelector.SetParameters(172.3,0.0,0.0)
-        rw_reader.addSelector(ReweightSelector)
+        #// Analysis Selectors:
+        AnalyzerSelector = ROOT.TSelectorAnalyzer()
+        an_reader.addSelector(AnalyzerSelector)
 
-        rw_chain = ROOT.TChain("t3")
-        rw_chain.Add(name)
+        #// Define chain and add file list:
+        chain = ROOT.TChain("t3")
+        for name in param.filenames:
+            chain.Add(name)
 
         #// Start processing the chain:
-        rw_chain.GetFile()  # force opening of the first file
-        rw_chain.SetMaxEntryLoop(2**60)
-        rw_chain.Process(rw_reader, "", rw_chain.GetMaxEntryLoop(), 0)
-        #rw_chain.Process(rw_reader, "", 10, 0)
+        chain.GetFile()  # force opening of the first file
+        chain.SetMaxEntryLoop(2**60)
+        chain.Process(an_reader, "", chain.GetMaxEntryLoop(), 0)
 
+
+    # *****************************************************
+    #// Perform reweight of NTuples:
+    # *****************************************************
+
+    if param.mode == 'reweight':
+
+        #// If need to reweight we need a chain for every file:
+
+        for name in param.filenames:
+
+            infolder, fname = os.path.split(name)
+
+            if not param.outfolder:
+                folder = infolder
+            else:
+                folder = param.outfolder
+
+            #// Define reader selector:
+            rw_reader = ROOT.TSelectorReader()
+
+            #// -- Reweight Selectors:
+            ReweightSelector = ROOT.TSelectorWrite()
+            ReweightSelector.debug=param.debug
+            ReweightSelector.SetFileName(folder,fname,param.suffix)
+            ReweightSelector.SetParameters(5.0,172.3,0.0,0.0)
+            rw_reader.addSelector(ReweightSelector)
+            
+            rw_chain = ROOT.TChain("t3")
+            rw_chain.Add(name)
+            
+            #// Start processing the chain:
+            rw_chain.GetFile()  # force opening of the first file
+            rw_chain.SetMaxEntryLoop(2**60)
+            if param.events < 0:
+                rw_chain.Process(rw_reader, "", rw_chain.GetMaxEntryLoop(), 0)
+            else:
+                rw_chain.Process(rw_reader, "", int(param.events), 0)
 
 
     print "Run time: %d seconds" % (time.time() - start_time)
@@ -109,32 +127,88 @@ def main(filenames):
     sys.exit()
 
 
+class Parameters:
+
+    def __init__(self):
+        
+        ## Argument parser
+
+        parser = argparse.ArgumentParser(description='NLO NTuples analysis tool.') #,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        subparser = parser.add_subparsers(dest='MODE', help='Program running mode: analysis or reweight')
+
+        parser_ana = subparser.add_parser('analysis', help='analysis help (add this mode for more specific help)')
+        parser_ana.add_argument("-o", "--output", dest="OUTPUT", default="plots.root", help="name of  [plots]")
+        parser_ana.add_argument("-f", "--folder", dest="FOLDER", default="", help="Output folder if different from input ones")
+        parser_ana.add_argument("-e", "--events", dest="EVENTS", default=-1, help="Number of events to be processed [all]")
+
+        parser_rwgt = subparser.add_parser('reweight', help='reweight help (add this mode for more specific help)')
+        parser_rwgt.add_argument("-s", "--suffix", dest="SUFFIX", default="_new", help="Suffix for output file name [_new]")
+        parser_rwgt.add_argument("-o", "--output", dest="OUTPUT", default="", help="Output file name. By default the input file name is used with suffix '_new'")
+        parser_rwgt.add_argument("-f", "--folder", dest="FOLDER", default="", help="Output folder if different from input ones")
+        parser_rwgt.add_argument("-e", "--events", dest="EVENTS", default=-1, help="Number of events to be processed [all]")
+        parser_rwgt.add_argument("-d", "--debug",  dest="DEBUG", default=False, help="Generate debug output [False]")
+        
+        parser.add_argument('INPUTFILES', nargs='+', metavar='Ntuple.root', help='One or more Root NTuple input files. When more than one input file is given, the files are processed one after the other.')
+        #parser.add_argument("-s","--show", action='store_true', dest="SHOW", default=False, help="show results in default web browser [NO]")
+        #parser.add_argument("-w","--overwrite", action='store_true', dest="OVERWRITE", default=False, help="overwrite existing plots [NO]")
+        #parser.add_argument("-n", "-j", "--num-threads",action="store", dest='NUM_THREADS', type=int, default=numcores, help="max number of threads to be used [%s]" % numcores)
+        #parser.add_argument("-a", "--alpha", action="store", dest='ALPHA_BAND', type=float, default=0.2, help="transparency of error bands [0.2]")
+        #parser.add_argument("-v", "--verbose", action="store_const", const=logging.DEBUG, dest="LOGLEVEL", default=logging.INFO, help="print debug (very verbose) messages [NO]")
+        #parser.add_argument("-q", "--quiet", action="store_const", const=logging.WARNING, dest="LOGLEVEL", default=logging.INFO, help="be very quiet [NO]")
+        #parser.add_argument("-p", "--prefix", dest="PREFIX", default="xxx", help="prefix to histogram file names")
+    
+        args       = parser.parse_args()
+        self.mode      = args.MODE
+        self.filenames = args.INPUTFILES
+        self.suffix    = args.SUFFIX
+        self.outfolder = args.FOLDER
+        self.events    = args.EVENTS
+        self.debug     = args.DEBUG
+
+        if self.outfolder:
+            if not os.path.isdir(self.outfolder):
+                print "Output folder does not exist, creating it.."
+                os.makedirs(self.outfolder)
+  
+        self.filenames.sort()
+
+
+    def print_parameters(self):
+
+        print "------------------------------"
+        print "--    SETUP PARAMETERS      --"
+        print "------------------------------"
+        print ""
+        print " MODE: ", self.mode
+        print ""
+        print " INPUT FILES:"
+        for i in self.filenames:
+            print " -", i
+        print ""
+        print " OUTPUT:"
+        if not self.outfolder:
+            print "   folder: not specified, use same as input-file folder"
+        else:
+            print "   folder: ", self.outfolder
+        print "   suffix: ", self.suffix
+        print ""
+        if self.events < 0:
+            print " EVENTS: all"
+        else:
+            print " EVENTS: ", self.events
+        print ""
+
+
 if __name__ == '__main__':
 
-  ## Argument parser
-  from argparse import ArgumentParser
+    input_param = Parameters()
+    input_param.print_parameters()
 
-  parser = ArgumentParser(description='NLO NTuples analysis tool.')
-  parser.add_argument('INPUTFILES', nargs='+', metavar='Ntuple.root', help='One or more Root NTuple input files. When more than one input file is given, the files are processed one after the other.')
-  parser.add_argument("-o", "--output", dest="OUTPUT", default="plots.root", help="name of  [plots]")
-  #parser.add_argument("-f", "--format", dest="FORMAT", default="genplots", help="output format for plots [genplots]")
-  #parser.add_argument("-s","--show", action='store_true', dest="SHOW", default=False, help="show results in default web browser [NO]")
-  #parser.add_argument("-w","--overwrite", action='store_true', dest="OVERWRITE", default=False, help="overwrite existing plots [NO]")
-  #parser.add_argument("-n", "-j", "--num-threads",action="store", dest='NUM_THREADS', type=int, default=numcores, help="max number of threads to be used [%s]" % numcores)
-  #parser.add_argument("-a", "--alpha", action="store", dest='ALPHA_BAND', type=float, default=0.2, help="transparency of error bands [0.2]")
-  #parser.add_argument("-v", "--verbose", action="store_const", const=logging.DEBUG, dest="LOGLEVEL", default=logging.INFO, help="print debug (very verbose) messages [NO]")
-  #parser.add_argument("-q", "--quiet", action="store_const", const=logging.WARNING, dest="LOGLEVEL", default=logging.INFO, help="be very quiet [NO]")
-  #parser.add_argument("-p", "--prefix", dest="PREFIX", default="xxx", help="prefix to histogram file names")
+    main(input_param)
 
-  args      = parser.parse_args()
-  filenames = args.INPUTFILES
-  output    = args.OUTPUT
 
-  # Output format:
-  # default: genplots style
-  #outform = args.FORMAT
-  #prefix  = args.PREFIX
-
-  filenames.sort()
-
-  main(filenames)
+# Example of lauch command for reweighting:
+#
+#     ./NtupleAnalyzer reweight --folder=EDNTuplesFiles_New --suffix=_mt172.3_mb0.0 EDNTuplesFiles/H1.0j_amegic_GGFHT_B_6500_pt25.0_eta4.5_r100_100.root
+#
+#

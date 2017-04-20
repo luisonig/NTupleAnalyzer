@@ -12,11 +12,12 @@
 extern "C" void heft_OLP_Start(const char *fname, int *ierr);
 extern "C" void heft_OLP_EvalSubProcess(int, double*, double, double*, double*);
 extern "C" void heft_OLP_Option(const char * assignment, int* success);
+extern "C" void heft_OLP_PrintParameter(const char * filename);
 
 extern "C" void full_OLP_Start(const char *fname, int *ierr);
 extern "C" void full_OLP_EvalSubProcess(int, double*, double, double*, double*);
 extern "C" void full_OLP_Option(const char * assignment, int* success);
-
+extern "C" void full_OLP_PrintParameter(const char * filename);
 
 // --------------------------------------------------------------------------- //
 // Selector
@@ -40,9 +41,12 @@ int TSelectorWrite::Type()
   return 2;
 }
 
-void TSelectorWrite::SetFileName(string name, string suffix)
+void TSelectorWrite::SetFileName(string folder, string fname, string suffix)
 {
-  outfilename=name.substr(0, name.size()-5)+suffix+".root";
+  std::cout<<folder<<std::endl;
+  std::cout<<fname<<std::endl;
+  outfilename=fname.substr(0, fname.size()-5)+suffix+".root";
+  outfilename=folder+"/"+outfilename;
   std::cout<<"Reweighted events save in file: ";
   std::cout<<outfilename<<std::endl;
   return;
@@ -236,6 +240,12 @@ int TSelectorWrite::InitializeOLP()
   
   heft_OLP_Start(fname.c_str(),&ierr);
   full_OLP_Start(fname.c_str(),&ierr);
+
+  if (debug) {
+    heft_OLP_PrintParameter("heft_parameters.dat");
+    full_OLP_PrintParameter("full_parameters.dat");
+  }
+
 #else  // DISABLE_OLP
   std::cout << "Fake calls to OLP_Option and OLP_Start"<<std::endl;
 #endif // DISABLE_OLP
@@ -370,19 +380,19 @@ int TSelectorWrite::CheckPoint(double heft_wgt, double full_wgt)
     return 1;
   }
 
-  if (full_wgt != full_wgt ) {
+  if (full_wgt != full_wgt) {
     full_wgt = 0.0;
     std::cout<<"NaN detected"<<std::endl;
     return 1;
   }
   
-  if ( abs(full_wgt) == std::numeric_limits<double>::infinity() ) {
+  if (abs(full_wgt) == std::numeric_limits<double>::infinity()) {
     full_wgt = 0.0;
     std::cout<<"INF detected"<<std::endl;       
     return 1;
   }
   
-  if ( abs(full_wgt/full_wgt) > 50.0 ) {
+  if (abs(full_wgt/full_wgt) > 50.0) {
     full_wgt = 0.0;
     std::cout<<"K-factor check failed"<<std::endl;
     return 1;

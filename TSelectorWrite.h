@@ -98,7 +98,7 @@ class TSelectorWrite : public TSelectorMain
 
   bool debug;
 
-  void SetFileName(string name, string suffix="_new");
+  void SetFileName(string folder, string fname, string suffix="_new");
   string outfilename;
   TFile* outputfile;
 
