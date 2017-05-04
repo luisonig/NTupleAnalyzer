@@ -82,7 +82,7 @@ class TSelectorWrite : public TSelectorMain
   void SlaveBegin();
   void SlaveTerminate();
 
-  TSelectorWrite();
+  TSelectorWrite(int multiplicity);
   ~TSelectorWrite();
 
   //--] Overridable methods
@@ -94,11 +94,12 @@ class TSelectorWrite : public TSelectorMain
 
   typedef std::array<int, 4> SubProcessto2;
   typedef std::array<int, 5> SubProcessto3;
-  typedef std::array<int, 6> SubProcessto4;;
+  typedef std::array<int, 6> SubProcessto4;
 
   bool debug;
+  const int multip;
 
-  void SetFileName(string folder, string fname, string suffix="_new");
+  void SetFileName(string fname, string extension);
   string outfilename;
   TFile* outputfile;
 
@@ -144,6 +145,12 @@ class TSelectorWrite : public TSelectorMain
   std::map<SubProcessto2, int> h1j_SubProcesses;
 
   // H+2jets:
+  void FillSubProcessMap_h2j();
+  std::map<SubProcessto3, int> h2j_SubProcesses;
+
+  // H+3jets:
+  void FillSubProcessMap_h3j();
+  std::map<SubProcessto4, int> h3j_SubProcesses;
 
   //--] Process Specific
 

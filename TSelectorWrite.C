@@ -23,8 +23,8 @@ extern "C" void full_OLP_PrintParameter(const char * filename);
 // Selector
 // --------------------------------------------------------------------------- //
 
-TSelectorWrite::TSelectorWrite()
-  : debug(0)
+TSelectorWrite::TSelectorWrite(const int multiplicity)
+  : debug(0), multip(multiplicity)
 {
   std::cout<<"*************************************"<<std::endl;
   std::cout<<"*** REWEIGHTING SELECTOR SELECTED ***"<<std::endl;
@@ -41,12 +41,10 @@ int TSelectorWrite::Type()
   return 2;
 }
 
-void TSelectorWrite::SetFileName(string folder, string fname, string suffix)
+void TSelectorWrite::SetFileName(string fname, string extension)
 {
-  std::cout<<folder<<std::endl;
-  std::cout<<fname<<std::endl;
-  outfilename=fname.substr(0, fname.size()-5)+suffix+".root";
-  outfilename=folder+"/"+outfilename;
+  //outfilename=fname.substr(0, fname.size()-5)+suffix+".root";
+  outfilename=fname+extension;
   std::cout<<"Reweighted events save in file: ";
   std::cout<<outfilename<<std::endl;
   return;
@@ -67,7 +65,13 @@ void TSelectorWrite::SetParameters(double nf, double mt, double mb, double mbms)
   e2 = alpha*4.*pi;
   mW = sqrt(mZ*mZ/2.+sqrt(mZ*mZ*mZ*mZ/4.-pi*alpha*mZ*mZ*vev*vev));
   sw = sqrt(1-mW*mW/(mZ*mZ));
-
+  
+  if (debug) {
+    std::cout<<"--- Parameter values ---"<<std::endl;
+    std::cout<<"e2 = "<<e2<<std::endl;
+    std::cout<<"mW = "<<mW<<std::endl;
+    std::cout<<"sw = "<<sw<<std::endl;
+  }
   return;
 }
 
@@ -192,7 +196,9 @@ void TSelectorWrite::PrepareEvent()
 int TSelectorWrite::InitializeOLP()
 {
   // Setup varibles:
-  const string fname("OLE_order.olc");
+  const string fname1("OLE_order_h1j.olc");
+  const string fname2("OLE_order_h2j.olc");
+  const string fname3("OLE_order_h3j.olc");
   int ierr(0);
 
   // Transmit to GoSam and initialize it:
@@ -224,22 +230,38 @@ int TSelectorWrite::InitializeOLP()
   ss<<fixed<<setprecision(12)<<Nf;
   const string Nf_str = "Nf=" + ss.str();
 
-
+  
 #ifndef DISABLE_OLP
   heft_OLP_Option(mZ_str.c_str(), &ierr);
   heft_OLP_Option(mW_str.c_str(), &ierr);
   heft_OLP_Option(mT_str.c_str(), &ierr);    
   heft_OLP_Option(mBMS_str.c_str(), &ierr);
   
+  //std::cout<<"------------->"<<mB_str<<std::endl;
   full_OLP_Option(Nf_str.c_str(), &ierr);  
   full_OLP_Option(mZ_str.c_str(), &ierr);
   full_OLP_Option(mW_str.c_str(), &ierr);
   full_OLP_Option(mT_str.c_str(), &ierr);    
   full_OLP_Option(mB_str.c_str(), &ierr); 
   full_OLP_Option(mBMS_str.c_str(), &ierr);
-  
-  heft_OLP_Start(fname.c_str(),&ierr);
-  full_OLP_Start(fname.c_str(),&ierr);
+
+  switch(multip){
+  case 1:
+    heft_OLP_Start(fname1.c_str(),&ierr);
+    full_OLP_Start(fname1.c_str(),&ierr);
+    FillSubProcessMap_h1j();
+    break;
+  case 2:
+    heft_OLP_Start(fname2.c_str(),&ierr);
+    full_OLP_Start(fname2.c_str(),&ierr);
+    FillSubProcessMap_h2j();
+    break;
+  case 3:
+    heft_OLP_Start(fname3.c_str(),&ierr);
+    full_OLP_Start(fname3.c_str(),&ierr);
+    FillSubProcessMap_h3j();
+    break;
+  }
 
   if (debug) {
     heft_OLP_PrintParameter("heft_parameters.dat");
@@ -249,8 +271,6 @@ int TSelectorWrite::InitializeOLP()
 #else  // DISABLE_OLP
   std::cout << "Fake calls to OLP_Option and OLP_Start"<<std::endl;
 #endif // DISABLE_OLP
-  
-  FillSubProcessMap_h1j();
 
   return ierr;
 }
@@ -280,8 +300,13 @@ void TSelectorWrite::Reweight()
     particles.push_back(vec);
   }
 
-  SubProcessto2 flavlist;
-  flavlist.fill(0);
+  //std::cout<<"--->multip ="<<multip<<std::endl;
+  SubProcessto2 flavlist4;
+  SubProcessto3 flavlist5;
+  SubProcessto4 flavlist6;
+  flavlist4.fill(0);
+  flavlist5.fill(0);
+  flavlist6.fill(0);
 
   for (unsigned i=0; i<particles.size(); i++){
     momenta[0+i*5] = particles[i].E();
@@ -290,22 +315,69 @@ void TSelectorWrite::Reweight()
     momenta[3+i*5] = particles[i].pz();
     momenta[4+i*5] = particles[i].m();
 
-    flavlist[i] = particles[i].user_index();
+    switch(multip){
+    case 1:
+      flavlist4[i] = particles[i].user_index();
+      break;
+    case 2:
+      flavlist5[i] = particles[i].user_index();
+      break;
+    case 3:
+      flavlist6[i] = particles[i].user_index();
+      break;
+    }
   } 
 
-  std::map<SubProcessto2, int>::iterator it;
-  it = h1j_SubProcesses.find(flavlist);
-  if ( it != h1j_SubProcesses.end()){
-    if (debug) {
-      PrintEvent(particles);
-      std::cout<<"subprocess = "<<h1j_SubProcesses[flavlist]<<std::endl;
+  std::map<SubProcessto2, int>::iterator it2;
+  it2 = h1j_SubProcesses.find(flavlist4);
+  std::map<SubProcessto3, int>::iterator it3;
+  it3 = h2j_SubProcesses.find(flavlist5);
+  std::map<SubProcessto4, int>::iterator it4;
+  it4 = h3j_SubProcesses.find(flavlist6);
+
+  switch(multip){
+  case 1:
+    if ( it2 != h1j_SubProcesses.end()){
+      if (debug) {
+	PrintEvent(particles);
+	std::cout<<"subprocess = "<<h1j_SubProcesses[flavlist4]<<std::endl;
+      }
     }
-  }
-  else {
-    std::cerr<<"ERROR SUBPROCESS NOT FOUND!\n---> "
-	     <<flavlist[0]<<" "<<flavlist[1]<<" -> "
-	     <<flavlist[2]<<" "<<flavlist[3]<<std::endl;
-    return;
+    else {
+      std::cerr<<"ERROR SUBPROCESS NOT FOUND!\n---> "
+	       <<flavlist4[0]<<" "<<flavlist4[1]<<" -> "
+	       <<flavlist4[2]<<" "<<flavlist4[3]<<std::endl;
+      return;
+    }
+    break;
+  case 2:
+    if ( it3 != h2j_SubProcesses.end()){
+      if (debug) {
+  	PrintEvent(particles);
+  	std::cout<<"subprocess = "<<h2j_SubProcesses[flavlist5]<<std::endl;
+      }
+    }
+    else {
+      std::cerr<<"ERROR SUBPROCESS NOT FOUND!\n---> "
+  	       <<flavlist5[0]<<" "<<flavlist5[1]<<" -> "
+  	       <<flavlist5[2]<<" "<<flavlist5[3]<<" "<<flavlist5[4]<<std::endl;
+      return;
+    }
+    break;
+  case 3:
+    if ( it4 != h3j_SubProcesses.end()){
+      if (debug) {
+  	PrintEvent(particles);
+  	std::cout<<"subprocess = "<<h3j_SubProcesses[flavlist6]<<std::endl;
+      }
+    }
+    else {
+      std::cerr<<"ERROR SUBPROCESS NOT FOUND!\n---> "
+  	       <<flavlist6[0]<<" "<<flavlist6[1]<<" -> "
+  	       <<flavlist6[2]<<" "<<flavlist6[3]<<" "<<flavlist6[4]<<std::endl;
+      return;
+    }
+    break;
   }
 
   double heft_wgt = 0.;
@@ -318,9 +390,21 @@ void TSelectorWrite::Reweight()
   // alphas for OLP:
   params[0]=1.0;
 
-#ifndef DISABLE_OLP  
-  heft_OLP_EvalSubProcess(h1j_SubProcesses[flavlist], momenta, orig_ren_scale(), params, res_heft);
-  full_OLP_EvalSubProcess(h1j_SubProcesses[flavlist], momenta, orig_ren_scale(), params, res_full);
+#ifndef DISABLE_OLP
+  switch(multip){
+  case 1:
+    heft_OLP_EvalSubProcess(h1j_SubProcesses[flavlist4], momenta, orig_ren_scale(), params, res_heft);
+    full_OLP_EvalSubProcess(h1j_SubProcesses[flavlist4], momenta, orig_ren_scale(), params, res_full);
+    break;
+  case 2:
+    heft_OLP_EvalSubProcess(h2j_SubProcesses[flavlist5], momenta, orig_ren_scale(), params, res_heft);
+    full_OLP_EvalSubProcess(h2j_SubProcesses[flavlist5], momenta, orig_ren_scale(), params, res_full);
+    break;
+  case 3:
+    heft_OLP_EvalSubProcess(h3j_SubProcesses[flavlist6], momenta, orig_ren_scale(), params, res_heft);
+    full_OLP_EvalSubProcess(h3j_SubProcesses[flavlist6], momenta, orig_ren_scale(), params, res_full);
+    break;
+  }
 
   double gs = sqrt(orig_alphas()*4.0*pi);
   
@@ -333,14 +417,34 @@ void TSelectorWrite::Reweight()
   // res_full[1] = single pole;
   // res_full[2] = finite part;
 
-  // for heft take Born
-  heft_wgt = orig_ps_wgt()*res_heft[3]*pow(gs,6)*e2;
- 
-  // for full take finite part of loop induced
-  full_wgt = orig_ps_wgt()*res_full[2]*(2.*pi)*pow(gs,6)*e2/64.0/pow(pi,4);
+  switch(multip){
+  case 1:
+    // for heft take Born
+    heft_wgt = orig_ps_wgt()*res_heft[3]*pow(gs,6)*e2;
+    // for full take finite part of loop induced
+    full_wgt = orig_ps_wgt()*res_full[2]*(2.*pi)*pow(gs,6)*e2/64.0/pow(pi,4);
+    break;
+  case 2:
+    // for heft take Born
+    heft_wgt = orig_ps_wgt()*res_heft[3]*pow(gs,8)*e2;
+    // for full take finite part of loop induced
+    full_wgt = orig_ps_wgt()*res_full[2]*(2.*pi)*pow(gs,8)*e2/64.0/pow(pi,4);
+    break;
+  case 3:
+    // for heft take Born
+    heft_wgt = orig_ps_wgt()*res_heft[3]*pow(gs,10)*e2;
+    // for full take finite part of loop induced
+    full_wgt = orig_ps_wgt()*res_full[2]*(2.*pi)*pow(gs,10)*e2/64.0/pow(pi,4);
+    break;
+  }
   
   if(debug){
     std::cout<<"------ CHECK -----"<<std::endl;
+    std::cout<<"heft = "<<heft_wgt<<std::endl;
+    std::cout<<"orig = "<<orig_me_wgt()<<std::endl;
+    std::cout<<"full = "<<full_wgt<<std::endl;
+    std::cout<<"psw  = "<<orig_ps_wgt()<<std::endl;
+    std::cout<<"as(Q)= "<<orig_alphas()<<std::endl;
     std::cout<<"ratio heft/orig = "<<heft_wgt/orig_me_wgt()<<std::endl;
     std::cout<<"ratio heft/full = "<<heft_wgt/full_wgt<<std::endl;
     std::cout<<"ratio full/orig = "<<full_wgt/orig_me_wgt()<<std::endl;
@@ -374,27 +478,27 @@ void TSelectorWrite::Reweight()
 
 int TSelectorWrite::CheckPoint(double heft_wgt, double full_wgt)
 {
-  if (heft_wgt/orig_me_wgt()-1.0 > 1e-5){
+  if (abs(heft_wgt/orig_me_wgt()-1.0) > 1e-5){
     full_wgt = 0.0;
-    std::cout<<"Born ratio unstable"<<std::endl;
+    std::cout<<"WARNING: Born ratio unstable"<<std::endl;
     return 1;
   }
 
   if (full_wgt != full_wgt) {
     full_wgt = 0.0;
-    std::cout<<"NaN detected"<<std::endl;
+    std::cout<<"WARNING: NaN detected"<<std::endl;
     return 1;
   }
   
   if (abs(full_wgt) == std::numeric_limits<double>::infinity()) {
     full_wgt = 0.0;
-    std::cout<<"INF detected"<<std::endl;       
+    std::cout<<"WARNING: INF detected"<<std::endl;       
     return 1;
   }
   
   if (abs(full_wgt/full_wgt) > 50.0) {
     full_wgt = 0.0;
-    std::cout<<"K-factor check failed"<<std::endl;
+    std::cout<<"WARNING: K-factor check failed"<<std::endl;
     return 1;
   }  
   return 0;
@@ -578,5 +682,646 @@ void TSelectorWrite::FillSubProcessMap_h1j()
   h1j_SubProcesses[{21,  5, 25,  5}] = 4;
   h1j_SubProcesses[{21, -5, 25, -5}] = 5;
 
+  return;
+}
+
+void TSelectorWrite::FillSubProcessMap_h2j()
+{
+  // h2jsubprocesses[{1, 1, 25, 1, 1}] = 1;
+  // h2jsubprocesses[{1, -1, 25, 1, -1}] = 2;
+  // h2jsubprocesses[{1, -1, 25, 2, -2}] = 12;
+  // h2jsubprocesses[{1, -1, 25, 3, -3}] = 12;
+  // h2jsubprocesses[{1, -1, 25, 4, -4}] = 12;
+  // h2jsubprocesses[{1, -1, 25, 5, -5}] = 12;
+  // h2jsubprocesses[{1, -1, 25, 21, 21}] = 5;
+  // h2jsubprocesses[{1, 2, 25, 1, 2}] = 13;
+  // h2jsubprocesses[{1, -2, 25, 1, -2}] = 14;
+  // h2jsubprocesses[{1, 3, 25, 1, 3}] = 13;
+  // h2jsubprocesses[{1, -3, 25, 1, -3}] = 14;
+  // h2jsubprocesses[{1, 4, 25, 1, 4}] = 13;
+  // h2jsubprocesses[{1, -4, 25, 1, -4}] = 14;
+  // h2jsubprocesses[{1, 5, 25, 1, 5}] = 13;
+  // h2jsubprocesses[{1, -5, 25, 1, -5}] = 14;
+  // h2jsubprocesses[{1, 21, 25, 21, 1}] = 6;
+  // h2jsubprocesses[{-1, 1, 25, 1, -1}] = 4;
+  // h2jsubprocesses[{-1, 1, 25, 2, -2}] = 15;
+  // h2jsubprocesses[{-1, 1, 25, 3, -3}] = 15;
+  // h2jsubprocesses[{-1, 1, 25, 4, -4}] = 15;
+  // h2jsubprocesses[{-1, 1, 25, 5, -5}] = 15;
+  // h2jsubprocesses[{-1, 1, 25, 21, 21}] = 7;
+  // h2jsubprocesses[{-1, -1, 25, -1, -1}] = 3;
+  // h2jsubprocesses[{-1, 2, 25, 2, -1}] = 16;
+  // h2jsubprocesses[{-1, -2, 25, -1, -2}] = 17;
+  // h2jsubprocesses[{-1, 3, 25, 3, -1}] = 16;
+  // h2jsubprocesses[{-1, -3, 25, -1, -3}] = 17;
+  // h2jsubprocesses[{-1, 4, 25, 4, -1}] = 16;
+  // h2jsubprocesses[{-1, -4, 25, -1, -4}] = 17;
+  // h2jsubprocesses[{-1, 5, 25, 5, -1}] = 16;
+  // h2jsubprocesses[{-1, -5, 25, -1, -5}] = 17;
+  // h2jsubprocesses[{-1, 21, 25, 21, -1}] = 8;
+  // h2jsubprocesses[{2,1, 25, 1, 2}] = 18;
+  // h2jsubprocesses[{2, -1, 25, 2, -1}] = 14;
+  // h2jsubprocesses[{2, 2, 25, 2, 2}] = 1;
+  // h2jsubprocesses[{2, -2, 25, 1, -1}] = 12;
+  // h2jsubprocesses[{2, -2, 25, 2, -2}] = 2;
+  // h2jsubprocesses[{2, -2, 25, 3, -3}] = 12;
+  // h2jsubprocesses[{2, -2, 25, 4, -4}] = 12;
+  // h2jsubprocesses[{2, -2, 25, 5, -5}] = 12;
+  // h2jsubprocesses[{2, -2, 25, 21, 21}] = 5;
+  // h2jsubprocesses[{2, 3, 25, 3, 2}] = 18;
+  // h2jsubprocesses[{2, -3, 25, 2, -3}] = 14;
+  // h2jsubprocesses[{2, 4, 25, 2, 4}] = 13;
+  // h2jsubprocesses[{2, -4, 25, 2, -4}] = 14;
+  // h2jsubprocesses[{2, 5, 25, 5, 2}] = 18;
+  // h2jsubprocesses[{2, -5, 25, 2, -5}] = 14;
+  // h2jsubprocesses[{2, 21, 25, 21, 2}] = 6;
+  // h2jsubprocesses[{-2, 1, 25, 1, -2}] = 16;
+  // h2jsubprocesses[{-2, -1, 25, -1, -2}] = 19;
+  // h2jsubprocesses[{-2, 2, 25, 1, -1}] = 15;
+  // h2jsubprocesses[{-2, 2, 25, 2, -2}] = 4;
+  // h2jsubprocesses[{-2, 2, 25, 3, -3}] = 15;
+  // h2jsubprocesses[{-2, 2, 25, 4, -4}] = 15;
+  // h2jsubprocesses[{-2, 2, 25, 5, -5}] = 15;
+  // h2jsubprocesses[{-2, 2, 25, 21, 21}] = 7;
+  // h2jsubprocesses[{-2, -2, 25, -2, -2}] = 3;
+  // h2jsubprocesses[{-2, 3, 25, 3, -2}] = 16;
+  // h2jsubprocesses[{-2, -3, 25, -3, -2}] = 19;
+  // h2jsubprocesses[{-2, 4, 25, 4, -2}] = 16;
+  // h2jsubprocesses[{-2, -4, 25, -2, -4}] = 17;
+  // h2jsubprocesses[{-2, 5, 25, 5, -2}] = 16;
+  // h2jsubprocesses[{-2, -5, 25, -5, -2}] = 19;
+  // h2jsubprocesses[{-2, 21, 25, 21, -2}] = 8;
+  // h2jsubprocesses[{3, 1, 25, 1, 3}] = 18;
+  // h2jsubprocesses[{3, -1, 25, 3, -1}] = 14;
+  // h2jsubprocesses[{3, 2, 25, 3, 2}] = 13;
+  // h2jsubprocesses[{3, -2, 25, 3, -2}] = 14;
+  // h2jsubprocesses[{3, 3, 25, 3, 3}] = 1;
+  // h2jsubprocesses[{3, -3, 25, 1, -1}] = 12;
+  // h2jsubprocesses[{3, -3, 25, 2, -2}] = 12;
+  // h2jsubprocesses[{3, -3, 25, 3, -3}] = 2;
+  // h2jsubprocesses[{3, -3, 25, 4, -4}] = 12;
+  // h2jsubprocesses[{3, -3, 25, 5, -5}] = 12;
+  // h2jsubprocesses[{3, -3, 25, 21, 21}] = 5;
+  // h2jsubprocesses[{3, 4, 25, 3, 4}] = 13;
+  // h2jsubprocesses[{3, -4, 25, 3, -4}] = 14;
+  // h2jsubprocesses[{3, 5, 25, 3, 5}] = 13;
+  // h2jsubprocesses[{3, -5, 25, 3, -5}] = 14;
+  // h2jsubprocesses[{3, 21, 25, 21, 3}] = 6;
+  // h2jsubprocesses[{-3, 1, 25, 1, -3}] = 16;
+  // h2jsubprocesses[{-3, -1, 25, -1, -3}] = 19;
+  // h2jsubprocesses[{-3, 2, 25, 2, -3}] = 16;
+  // h2jsubprocesses[{-3, -2, 25, -3, -2}] = 17;
+  // h2jsubprocesses[{-3, 3, 25, 1, -1}] = 15;
+  // h2jsubprocesses[{-3, 3, 25, 2, -2}] = 15;
+  // h2jsubprocesses[{-3, 3, 25, 3, -3}] = 4;
+  // h2jsubprocesses[{-3, 3, 25, 4, -4}] = 15;
+  // h2jsubprocesses[{-3, 3, 25, 5, -5}] = 15;
+  // h2jsubprocesses[{-3, 3, 25, 21, 21}] = 7;
+  // h2jsubprocesses[{-3, -3, 25, -3, -3}] = 3;
+  // h2jsubprocesses[{-3, 4, 25, 4, -3}] = 16;
+  // h2jsubprocesses[{-3, -4, 25, -3, -4}] = 17;
+  // h2jsubprocesses[{-3, 5, 25, 5, -3}] = 16;
+  // h2jsubprocesses[{-3, -5, 25, -3, -5}] = 17;
+  // h2jsubprocesses[{-3, 21, 25, 21, -3}] = 8;
+  // h2jsubprocesses[{4, 1, 25, 1, 4}] = 18;
+  // h2jsubprocesses[{4, -1, 25, 4, -1}] = 14;
+  // h2jsubprocesses[{4, 2, 25, 2, 4}] = 18;
+  // h2jsubprocesses[{4, -2, 25, 4, -2}] = 14;
+  // h2jsubprocesses[{4, 3, 25, 3, 4}] = 18;
+  // h2jsubprocesses[{4, -3, 25, 4, -3}] = 14;
+  // h2jsubprocesses[{4, 4, 25, 4, 4}] = 1;
+  // h2jsubprocesses[{4, -4, 25, 1, -1}] = 12;
+  // h2jsubprocesses[{4, -4, 25, 2, -2}] = 12;
+  // h2jsubprocesses[{4, -4, 25, 3, -3}] = 12;
+  // h2jsubprocesses[{4, -4, 25, 4, -4}] = 2;
+  // h2jsubprocesses[{4, -4, 25, 5, -5}] = 12;
+  // h2jsubprocesses[{4, -4, 25, 21, 21}] = 5;
+  // h2jsubprocesses[{4, 5, 25, 5, 4}] = 18;
+  // h2jsubprocesses[{4, -5, 25, 4, -5}] = 14;
+  // h2jsubprocesses[{4, 21, 25, 21, 4}] = 6;
+  // h2jsubprocesses[{-4, 1, 25, 1, -4}] = 16;
+  // h2jsubprocesses[{-4, -1, 25, -1, -4}] = 19;
+  // h2jsubprocesses[{-4, 2, 25, 2, -4}] = 16;
+  // h2jsubprocesses[{-4, -2, 25, -2, -4}] = 19;
+  // h2jsubprocesses[{-4, 3, 25, 3, -4}] = 16;
+  // h2jsubprocesses[{-4, -3, 25, -3, -4}] = 19;
+  // h2jsubprocesses[{-4, 4, 25, 1, -1}] = 15;
+  // h2jsubprocesses[{-4, 4, 25, 2, -2}] = 15;
+  // h2jsubprocesses[{-4, 4, 25, 3, -3}] = 15;
+  // h2jsubprocesses[{-4, 4, 25, 4, -4}] = 4;
+  // h2jsubprocesses[{-4, 4, 25, 5, -5}] = 15;
+  // h2jsubprocesses[{-4, 4, 25, 21, 21}] = 7;
+  // h2jsubprocesses[{-4, -4, 25, -4, -4}] = 3;
+  // h2jsubprocesses[{-4, 5, 25, 5, -4}] = 16;
+  // h2jsubprocesses[{-4, -5, 25, -5, -4}] = 19;
+  // h2jsubprocesses[{-4, 21, 25, 21, -4}] = 8;
+  // h2jsubprocesses[{5, 1, 25, 1, 5}] = 18;
+  // h2jsubprocesses[{5, -1, 25, 5, -1}] = 14;
+  // h2jsubprocesses[{5, 2, 25, 5, 2}] = 13;
+  // h2jsubprocesses[{5, -2, 25, 5, -2}] = 14;
+  // h2jsubprocesses[{5, 3, 25, 3, 5}] = 18;
+  // h2jsubprocesses[{5, -3, 25, 5, -3}] = 14;
+  // h2jsubprocesses[{5, 4, 25, 5, 4}] = 13;
+  // h2jsubprocesses[{5, -4, 25, 5, -4}] = 14;
+  // h2jsubprocesses[{5, 5, 25, 5, 5}] = 1;
+  // h2jsubprocesses[{5, -5, 25, 1, -1}] = 12;
+  // h2jsubprocesses[{5, -5, 25, 2, -2}] = 12;
+  // h2jsubprocesses[{5, -5, 25, 3, -3}] = 12;
+  // h2jsubprocesses[{5, -5, 25, 4, -4}] = 12;
+  // h2jsubprocesses[{5, -5, 25, 5, -5}] = 2;
+  // h2jsubprocesses[{5, -5, 25, 21, 21}] = 5;
+  // h2jsubprocesses[{5, 21, 25, 21, 5}] = 6;
+  // h2jsubprocesses[{-5, 1, 25, 1, -5}] = 16;
+  // h2jsubprocesses[{-5, -1, 25, -1, -5}] = 19;
+  // h2jsubprocesses[{-5, 2, 25, 2, -5}] = 16;
+  // h2jsubprocesses[{-5, -2, 25, -5, -2}] = 17;
+  // h2jsubprocesses[{-5, 3, 25, 3, -5}] = 16;
+  // h2jsubprocesses[{-5, -3, 25, -3, -5}] = 19;
+  // h2jsubprocesses[{-5, 4, 25, 4, -5}] = 16;
+  // h2jsubprocesses[{-5, -4, 25, -5, -4}] = 17;
+  // h2jsubprocesses[{-5, 5, 25, 1, -1}] = 15;
+  // h2jsubprocesses[{-5, 5, 25, 2, -2}] = 15;
+  // h2jsubprocesses[{-5, 5, 25, 3, -3}] = 15;
+  // h2jsubprocesses[{-5, 5, 25, 4, -4}] = 15;
+  // h2jsubprocesses[{-5, 5, 25, 5, -5}] = 4;
+  // h2jsubprocesses[{-5, 5, 25, 21, 21}] = 7;
+  // h2jsubprocesses[{-5, -5, 25, -5, -5}] = 3;
+  // h2jsubprocesses[{-5, 21, 25, 21, -5}] = 8;
+  // h2jsubprocesses[{21, 1, 25, 21, 1}] = 9;
+  // h2jsubprocesses[{21, -1, 25, 21, -1}] = 10;
+  // h2jsubprocesses[{21, 2, 25, 21, 2}] = 9;
+  // h2jsubprocesses[{21, -2, 25, 21, -2}] = 10;
+  // h2jsubprocesses[{21, 3, 25, 21, 3}] = 9;
+  // h2jsubprocesses[{21, -3, 25, 21, -3}] = 10;
+  // h2jsubprocesses[{21, 4, 25, 21, 4}] = 9;
+  // h2jsubprocesses[{21, -4, 25, 21, -4}] = 10;
+  // h2jsubprocesses[{21, 5, 25, 21, 5}] = 9;
+  // h2jsubprocesses[{21, -5, 25, 21, -5}] = 10;
+  // h2jsubprocesses[{21, 21, 25, 1, -1}] = 11;
+  // h2jsubprocesses[{21, 21, 25, 2, -2}] = 11;
+  // h2jsubprocesses[{21, 21, 25, 3, -3}] = 11;
+  // h2jsubprocesses[{21, 21, 25, 4, -4}] = 11;
+  // h2jsubprocesses[{21, 21, 25, 5, -5}] = 11;
+  // h2jsubprocesses[{21, 21, 25, 21, 21}] = 0;
+
+  h2j_SubProcesses[{ 1,  1, 25,  1,  1}] = 1;
+  h2j_SubProcesses[{ 1, -1, 25,  1, -1}] = 2;
+  h2j_SubProcesses[{ 1, -1, 25,  2, -2}] = 12;
+  h2j_SubProcesses[{ 1, -1, 25,  3, -3}] = 12;
+  h2j_SubProcesses[{ 1, -1, 25,  4, -4}] = 12;
+  h2j_SubProcesses[{ 1, -1, 25,  5, -5}] = 12;
+  h2j_SubProcesses[{ 1, -1, 25, 21, 21}] = 5;
+  h2j_SubProcesses[{ 1,  2, 25,  1,  2}] = 13;
+  h2j_SubProcesses[{ 1, -2, 25,  1, -2}] = 14;
+  h2j_SubProcesses[{ 1,  3, 25,  1,  3}] = 13;
+  h2j_SubProcesses[{ 1, -3, 25,  1, -3}] = 14;
+  h2j_SubProcesses[{ 1,  4, 25,  1,  4}] = 13;
+  h2j_SubProcesses[{ 1, -4, 25,  1, -4}] = 14;
+  h2j_SubProcesses[{ 1,  5, 25,  1,  5}] = 13;
+  h2j_SubProcesses[{ 1, -5, 25,  1, -5}] = 14;
+  h2j_SubProcesses[{ 1, 21, 25, 21,  1}] = 6;
+  h2j_SubProcesses[{-1,  1, 25,  1, -1}] = 4;
+  h2j_SubProcesses[{-1,  1, 25,  2, -2}] = 15;
+  h2j_SubProcesses[{-1,  1, 25,  3, -3}] = 15;
+  h2j_SubProcesses[{-1,  1, 25,  4, -4}] = 15;
+  h2j_SubProcesses[{-1,  1, 25,  5, -5}] = 15;
+  h2j_SubProcesses[{-1,  1, 25, 21, 21}] = 7;
+  h2j_SubProcesses[{-1, -1, 25, -1, -1}] = 3;
+  h2j_SubProcesses[{-1,  2, 25,  2, -1}] = 16;
+  h2j_SubProcesses[{-1, -2, 25, -1, -2}] = 17;
+  h2j_SubProcesses[{-1,  3, 25,  3, -1}] = 16;
+  h2j_SubProcesses[{-1, -3, 25, -1, -3}] = 17;
+  h2j_SubProcesses[{-1,  4, 25,  4, -1}] = 16;
+  h2j_SubProcesses[{-1, -4, 25, -1, -4}] = 17;
+  h2j_SubProcesses[{-1,  5, 25,  5, -1}] = 16;
+  h2j_SubProcesses[{-1, -5, 25, -1, -5}] = 17;
+  h2j_SubProcesses[{-1, 21, 25, 21, -1}] = 8;
+  h2j_SubProcesses[{ 2,  1, 25,  1,  2}] = 18;
+  h2j_SubProcesses[{ 2, -1, 25,  2, -1}] = 14;
+  h2j_SubProcesses[{ 2,  2, 25,  2,  2}] = 1;
+  h2j_SubProcesses[{ 2, -2, 25,  1, -1}] = 12;
+  h2j_SubProcesses[{ 2, -2, 25,  2, -2}] = 2;
+  h2j_SubProcesses[{ 2, -2, 25,  3, -3}] = 12;
+  h2j_SubProcesses[{ 2, -2, 25,  4, -4}] = 12;
+  h2j_SubProcesses[{ 2, -2, 25,  5, -5}] = 12;
+  h2j_SubProcesses[{ 2, -2, 25, 21, 21}] = 5;
+  h2j_SubProcesses[{ 2,  3, 25,  3,  2}] = 18;
+  h2j_SubProcesses[{ 2, -3, 25,  2, -3}] = 14;
+  h2j_SubProcesses[{ 2,  4, 25,  2,  4}] = 13;
+  h2j_SubProcesses[{ 2, -4, 25,  2, -4}] = 14;
+  h2j_SubProcesses[{ 2,  5, 25,  5,  2}] = 18;
+  h2j_SubProcesses[{ 2, -5, 25,  2, -5}] = 14;
+  h2j_SubProcesses[{ 2, 21, 25, 21,  2}] = 6;
+  h2j_SubProcesses[{-2,  1, 25,  1, -2}] = 16;
+  h2j_SubProcesses[{-2, -1, 25, -1, -2}] = 19;
+  h2j_SubProcesses[{-2,  2, 25,  1, -1}] = 15;
+  h2j_SubProcesses[{-2,  2, 25,  2, -2}] = 4;
+  h2j_SubProcesses[{-2,  2, 25,  3, -3}] = 15;
+  h2j_SubProcesses[{-2,  2, 25,  4, -4}] = 15;
+  h2j_SubProcesses[{-2,  2, 25,  5, -5}] = 15;
+  h2j_SubProcesses[{-2,  2, 25, 21, 21}] = 7;
+  h2j_SubProcesses[{-2, -2, 25, -2, -2}] = 3;
+  h2j_SubProcesses[{-2,  3, 25,  3, -2}] = 16;
+  h2j_SubProcesses[{-2, -3, 25, -3, -2}] = 19;
+  h2j_SubProcesses[{-2,  4, 25,  4, -2}] = 16;
+  h2j_SubProcesses[{-2, -4, 25, -2, -4}] = 17;
+  h2j_SubProcesses[{-2,  5, 25,  5, -2}] = 16;
+  h2j_SubProcesses[{-2, -5, 25, -5, -2}] = 19;
+  h2j_SubProcesses[{-2, 21, 25, 21, -2}] = 8;
+  h2j_SubProcesses[{ 3,  1, 25,  1,  3}] = 18;
+  h2j_SubProcesses[{ 3, -1, 25,  3, -1}] = 14;
+  h2j_SubProcesses[{ 3,  2, 25,  3,  2}] = 13;
+  h2j_SubProcesses[{ 3, -2, 25,  3, -2}] = 14;
+  h2j_SubProcesses[{ 3,  3, 25,  3,  3}] = 1;
+  h2j_SubProcesses[{ 3, -3, 25,  1, -1}] = 12;
+  h2j_SubProcesses[{ 3, -3, 25,  2, -2}] = 12;
+  h2j_SubProcesses[{ 3, -3, 25,  3, -3}] = 2;
+  h2j_SubProcesses[{ 3, -3, 25,  4, -4}] = 12;
+  h2j_SubProcesses[{ 3, -3, 25,  5, -5}] = 12;
+  h2j_SubProcesses[{ 3, -3, 25, 21, 21}] = 5;
+  h2j_SubProcesses[{ 3,  4, 25,  3,  4}] = 13;
+  h2j_SubProcesses[{ 3, -4, 25,  3, -4}] = 14;
+  h2j_SubProcesses[{ 3,  5, 25,  3,  5}] = 13;
+  h2j_SubProcesses[{ 3, -5, 25,  3, -5}] = 14;
+  h2j_SubProcesses[{ 3, 21, 25, 21,  3}] = 6;
+  h2j_SubProcesses[{-3,  1, 25,  1, -3}] = 16;
+  h2j_SubProcesses[{-3, -1, 25, -1, -3}] = 19;
+  h2j_SubProcesses[{-3,  2, 25,  2, -3}] = 16;
+  h2j_SubProcesses[{-3, -2, 25, -3, -2}] = 17;
+  h2j_SubProcesses[{-3,  3, 25,  1, -1}] = 15;
+  h2j_SubProcesses[{-3,  3, 25,  2, -2}] = 15;
+  h2j_SubProcesses[{-3,  3, 25,  3, -3}] = 4;
+  h2j_SubProcesses[{-3,  3, 25,  4, -4}] = 15;
+  h2j_SubProcesses[{-3,  3, 25,  5, -5}] = 15;
+  h2j_SubProcesses[{-3,  3, 25, 21, 21}] = 7;
+  h2j_SubProcesses[{-3, -3, 25, -3, -3}] = 3;
+  h2j_SubProcesses[{-3,  4, 25,  4, -3}] = 16;
+  h2j_SubProcesses[{-3, -4, 25, -3, -4}] = 17;
+  h2j_SubProcesses[{-3,  5, 25,  5, -3}] = 16;
+  h2j_SubProcesses[{-3, -5, 25, -3, -5}] = 17;
+  h2j_SubProcesses[{-3, 21, 25, 21, -3}] = 8;
+  h2j_SubProcesses[{ 4,  1, 25,  1,  4}] = 18;
+  h2j_SubProcesses[{ 4, -1, 25,  4, -1}] = 14;
+  h2j_SubProcesses[{ 4,  2, 25,  2,  4}] = 18;
+  h2j_SubProcesses[{ 4, -2, 25,  4, -2}] = 14;
+  h2j_SubProcesses[{ 4,  3, 25,  3,  4}] = 18;
+  h2j_SubProcesses[{ 4, -3, 25,  4, -3}] = 14;
+  h2j_SubProcesses[{ 4,  4, 25,  4,  4}] = 1;
+  h2j_SubProcesses[{ 4, -4, 25,  1, -1}] = 12;
+  h2j_SubProcesses[{ 4, -4, 25,  2, -2}] = 12;
+  h2j_SubProcesses[{ 4, -4, 25,  3, -3}] = 12;
+  h2j_SubProcesses[{ 4, -4, 25,  4, -4}] = 2;
+  h2j_SubProcesses[{ 4, -4, 25,  5, -5}] = 12;
+  h2j_SubProcesses[{ 4, -4, 25, 21, 21}] = 5;
+  h2j_SubProcesses[{ 4,  5, 25,  5,  4}] = 18;
+  h2j_SubProcesses[{ 4, -5, 25,  4, -5}] = 14;
+  h2j_SubProcesses[{ 4, 21, 25, 21,  4}] = 6;
+  h2j_SubProcesses[{-4,  1, 25,  1, -4}] = 16;
+  h2j_SubProcesses[{-4, -1, 25, -1, -4}] = 19;
+  h2j_SubProcesses[{-4,  2, 25,  2, -4}] = 16;
+  h2j_SubProcesses[{-4, -2, 25, -2, -4}] = 19;
+  h2j_SubProcesses[{-4,  3, 25,  3, -4}] = 16;
+  h2j_SubProcesses[{-4, -3, 25, -3, -4}] = 19;
+  h2j_SubProcesses[{-4,  4, 25,  1, -1}] = 15;
+  h2j_SubProcesses[{-4,  4, 25,  2, -2}] = 15;
+  h2j_SubProcesses[{-4,  4, 25,  3, -3}] = 15;
+  h2j_SubProcesses[{-4,  4, 25,  4, -4}] = 4;
+  h2j_SubProcesses[{-4,  4, 25,  5, -5}] = 15;
+  h2j_SubProcesses[{-4,  4, 25, 21, 21}] = 7;
+  h2j_SubProcesses[{-4, -4, 25, -4, -4}] = 3;
+  h2j_SubProcesses[{-4,  5, 25,  5, -4}] = 16;
+  h2j_SubProcesses[{-4, -5, 25, -5, -4}] = 19;
+  h2j_SubProcesses[{-4, 21, 25, 21, -4}] = 8;
+  h2j_SubProcesses[{ 5,  1, 25,  1,  5}] = 18;
+  h2j_SubProcesses[{ 5, -1, 25,  5, -1}] = 14;
+  h2j_SubProcesses[{ 5,  2, 25,  5,  2}] = 13;
+  h2j_SubProcesses[{ 5, -2, 25,  5, -2}] = 14;
+  h2j_SubProcesses[{ 5,  3, 25,  3,  5}] = 18;
+  h2j_SubProcesses[{ 5, -3, 25,  5, -3}] = 14;
+  h2j_SubProcesses[{ 5,  4, 25,  5,  4}] = 13;
+  h2j_SubProcesses[{ 5, -4, 25,  5, -4}] = 14;
+  h2j_SubProcesses[{ 5,  5, 25,  5,  5}] = 1;
+  h2j_SubProcesses[{ 5, -5, 25,  1, -1}] = 12;
+  h2j_SubProcesses[{ 5, -5, 25,  2, -2}] = 12;
+  h2j_SubProcesses[{ 5, -5, 25,  3, -3}] = 12;
+  h2j_SubProcesses[{ 5, -5, 25,  4, -4}] = 12;
+  h2j_SubProcesses[{ 5, -5, 25,  5, -5}] = 2;
+  h2j_SubProcesses[{ 5, -5, 25, 21, 21}] = 5;
+  h2j_SubProcesses[{ 5, 21, 25, 21,  5}] = 6;
+  h2j_SubProcesses[{-5,  1, 25,  1, -5}] = 16;
+  h2j_SubProcesses[{-5, -1, 25, -1, -5}] = 19;
+  h2j_SubProcesses[{-5,  2, 25,  2, -5}] = 16;
+  h2j_SubProcesses[{-5, -2, 25, -5, -2}] = 17;
+  h2j_SubProcesses[{-5,  3, 25,  3, -5}] = 16;
+  h2j_SubProcesses[{-5, -3, 25, -3, -5}] = 19;
+  h2j_SubProcesses[{-5,  4, 25,  4, -5}] = 16;
+  h2j_SubProcesses[{-5, -4, 25, -5, -4}] = 17;
+  h2j_SubProcesses[{-5,  5, 25,  1, -1}] = 15;
+  h2j_SubProcesses[{-5,  5, 25,  2, -2}] = 15;
+  h2j_SubProcesses[{-5,  5, 25,  3, -3}] = 15;
+  h2j_SubProcesses[{-5,  5, 25,  4, -4}] = 15;
+  h2j_SubProcesses[{-5,  5, 25,  5, -5}] = 4;
+  h2j_SubProcesses[{-5,  5, 25, 21, 21}] = 7;
+  h2j_SubProcesses[{-5, -5, 25, -5, -5}] = 3;
+  h2j_SubProcesses[{-5, 21, 25, 21, -5}] = 8;
+  h2j_SubProcesses[{21,  1, 25, 21,  1}] = 9;
+  h2j_SubProcesses[{21, -1, 25, 21, -1}] = 10;
+  h2j_SubProcesses[{21,  2, 25, 21,  2}] = 9;
+  h2j_SubProcesses[{21, -2, 25, 21, -2}] = 10;
+  h2j_SubProcesses[{21,  3, 25, 21,  3}] = 9;
+  h2j_SubProcesses[{21, -3, 25, 21, -3}] = 10;
+  h2j_SubProcesses[{21,  4, 25, 21,  4}] = 9;
+  h2j_SubProcesses[{21, -4, 25, 21, -4}] = 10;
+  h2j_SubProcesses[{21,  5, 25, 21,  5}] = 9;
+  h2j_SubProcesses[{21, -5, 25, 21, -5}] = 10;
+  h2j_SubProcesses[{21, 21, 25,  1, -1}] = 11;
+  h2j_SubProcesses[{21, 21, 25,  2, -2}] = 11;
+  h2j_SubProcesses[{21, 21, 25,  3, -3}] = 11;
+  h2j_SubProcesses[{21, 21, 25,  4, -4}] = 11;
+  h2j_SubProcesses[{21, 21, 25,  5, -5}] = 11;
+  h2j_SubProcesses[{21, 21, 25, 21, 21}] = 0;
+  
+  return; 
+}
+
+void TSelectorWrite::FillSubProcessMap_h3j()
+{
+  h3j_SubProcesses[{1, 1,25, 21, 1, 1}] = 20;
+  h3j_SubProcesses[{1, -1,25, 21, 1, -1}] = 21;
+  h3j_SubProcesses[{1, -1,25, 21, 2, -2}] = 0;
+  h3j_SubProcesses[{1, -1,25, 21, 3, -3}] = 0;
+  h3j_SubProcesses[{1, -1,25, 21, 4, -4}] = 0;
+  h3j_SubProcesses[{1, -1,25, 21, 5, -5}] = 0;
+  h3j_SubProcesses[{1, -1,25, 21, 21, 21}] = 13;
+  h3j_SubProcesses[{1, 2,25, 21, 1, 2}] = 1;
+  h3j_SubProcesses[{1, -2,25, 21, 1, -2}] = 2;
+  h3j_SubProcesses[{1, 3,25, 21, 1, 3}] = 1;
+  h3j_SubProcesses[{1, -3,25, 21, 1, -3}] = 2;
+  h3j_SubProcesses[{1, 4,25, 21, 1, 4}] = 1;
+  h3j_SubProcesses[{1, -4,25, 21, 1, -4}] = 2;
+  h3j_SubProcesses[{1, 5,25, 21, 1, 5}] = 1;
+  h3j_SubProcesses[{1, -5,25, 21, 1, -5}] = 2;
+  h3j_SubProcesses[{1, 21,25, 1, 1, -1}] = 22;
+  h3j_SubProcesses[{1, 21,25, 1, 2, -2}] = 3;
+  h3j_SubProcesses[{1, 21,25, 1, 3, -3}] = 3;
+  h3j_SubProcesses[{1, 21,25, 1, 4, -4}] = 3;
+  h3j_SubProcesses[{1, 21,25, 1, 5, -5}] = 3;
+  h3j_SubProcesses[{1, 21,25, 21, 21, 1}] = 14;
+  h3j_SubProcesses[{-1, 1,25, 21, 1, -1}] = 23;
+  h3j_SubProcesses[{-1, 1,25, 21, 2, -2}] = 4;
+  h3j_SubProcesses[{-1, 1,25, 21, 3, -3}] = 4;
+  h3j_SubProcesses[{-1, 1,25, 21, 4, -4}] = 4;
+  h3j_SubProcesses[{-1, 1,25, 21, 5, -5}] = 4;
+  h3j_SubProcesses[{-1, 1,25, 21, 21, 21}] = 15;
+  h3j_SubProcesses[{-1, -1,25, 21, -1, -1}] = 24;
+  h3j_SubProcesses[{-1, 2,25, 21, 2, -1}] = 5;
+  h3j_SubProcesses[{-1, -2,25, 21, -1, -2}] = 6;
+  h3j_SubProcesses[{-1, 3,25, 21, 3, -1}] = 5;
+  h3j_SubProcesses[{-1, -3,25, 21, -1, -3}] = 6;
+  h3j_SubProcesses[{-1, 4,25, 21, 4, -1}] = 5;
+  h3j_SubProcesses[{-1, -4,25, 21, -1, -4}] = 6;
+  h3j_SubProcesses[{-1, 5,25, 21, 5, -1}] = 5;
+  h3j_SubProcesses[{-1, -5,25, 21, -1, -5}] = 6;
+  h3j_SubProcesses[{-1, 21,25, 1, -1, -1}] = 25;
+  h3j_SubProcesses[{-1, 21,25, -1, 2, -2}] = 7;
+  h3j_SubProcesses[{-1, 21,25, -1, 3, -3}] = 7;
+  h3j_SubProcesses[{-1, 21,25, -1, 4, -4}] = 7;
+  h3j_SubProcesses[{-1, 21,25, -1, 5, -5}] = 7;
+  h3j_SubProcesses[{-1, 21,25, 21, 21, -1}] = 16;
+  h3j_SubProcesses[{2, 1,25, 21, 1, 2}] = 8;
+  h3j_SubProcesses[{2, -1,25, 21, 2, -1}] = 2;
+  h3j_SubProcesses[{2, 2,25, 21, 2, 2}] = 20;
+  h3j_SubProcesses[{2, -2,25, 21, 1, -1}] = 0;
+  h3j_SubProcesses[{2, -2,25, 21, 2, -2}] = 21;
+  h3j_SubProcesses[{2, -2,25, 21, 3, -3}] = 0;
+  h3j_SubProcesses[{2, -2,25, 21, 4, -4}] = 0;
+  h3j_SubProcesses[{2, -2,25, 21, 5, -5}] = 0;
+  h3j_SubProcesses[{2, -2,25, 21, 21, 21}] = 13;
+  h3j_SubProcesses[{2, 3,25, 21, 3, 2}] = 8;
+  h3j_SubProcesses[{2, -3,25, 21, 2, -3}] = 2;
+  h3j_SubProcesses[{2, 4,25, 21, 2, 4}] = 1;
+  h3j_SubProcesses[{2, -4,25, 21, 2, -4}] = 2;
+  h3j_SubProcesses[{2, 5,25, 21, 5, 2}] = 8;
+  h3j_SubProcesses[{2, -5,25, 21, 2, -5}] = 2;
+  h3j_SubProcesses[{2, 21,25, 2, 1, -1}] = 3;
+  h3j_SubProcesses[{2, 21,25, 2, 2, -2}] = 22;
+  h3j_SubProcesses[{2, 21,25, 2, 3, -3}] = 3;
+  h3j_SubProcesses[{2, 21,25, 2, 4, -4}] = 3;
+  h3j_SubProcesses[{2, 21,25, 2, 5, -5}] = 3;
+  h3j_SubProcesses[{2, 21,25, 21, 21, 2}] = 14;
+  h3j_SubProcesses[{-2, 1,25, 21, 1, -2}] = 5;
+  h3j_SubProcesses[{-2, -1,25, 21, -1, -2}] = 9;
+  h3j_SubProcesses[{-2, 2,25, 21, 1, -1}] = 4;
+  h3j_SubProcesses[{-2, 2,25, 21, 2, -2}] = 23;
+  h3j_SubProcesses[{-2, 2,25, 21, 3, -3}] = 4;
+  h3j_SubProcesses[{-2, 2,25, 21, 4, -4}] = 4;
+  h3j_SubProcesses[{-2, 2,25, 21, 5, -5}] = 4;
+  h3j_SubProcesses[{-2, 2,25, 21, 21, 21}] = 15;
+  h3j_SubProcesses[{-2, -2,25, 21, -2, -2}] = 24;
+  h3j_SubProcesses[{-2, 3,25, 21, 3, -2}] = 5;
+  h3j_SubProcesses[{-2, -3,25, 21, -3, -2}] = 9;
+  h3j_SubProcesses[{-2, 4,25, 21, 4, -2}] = 5;
+  h3j_SubProcesses[{-2, -4,25, 21, -2, -4}] = 6;
+  h3j_SubProcesses[{-2, 5,25, 21, 5, -2}] = 5;
+  h3j_SubProcesses[{-2, -5,25, 21, -5, -2}] = 9;
+  h3j_SubProcesses[{-2, 21,25, -2, 1, -1}] = 7;
+  h3j_SubProcesses[{-2, 21,25, 2, -2, -2}] = 25;
+  h3j_SubProcesses[{-2, 21,25, -2, 3, -3}] = 7;
+  h3j_SubProcesses[{-2, 21,25, -2, 4, -4}] = 7;
+  h3j_SubProcesses[{-2, 21,25, -2, 5, -5}] = 7;
+  h3j_SubProcesses[{-2, 21,25, 21, 21, -2}] = 16;
+  h3j_SubProcesses[{3, 1,25, 21, 1, 3}] = 8;
+  h3j_SubProcesses[{3, -1,25, 21, 3, -1}] = 2;
+  h3j_SubProcesses[{3, 2,25, 21, 3, 2}] = 1;
+  h3j_SubProcesses[{3, -2,25, 21, 3, -2}] = 2;
+  h3j_SubProcesses[{3, 3,25, 21, 3, 3}] = 20;
+  h3j_SubProcesses[{3, -3,25, 21, 1, -1}] = 0;
+  h3j_SubProcesses[{3, -3,25, 21, 2, -2}] = 0;
+  h3j_SubProcesses[{3, -3,25, 21, 3, -3}] = 21;
+  h3j_SubProcesses[{3, -3,25, 21, 4, -4}] = 0;
+  h3j_SubProcesses[{3, -3,25, 21, 5, -5}] = 0;
+  h3j_SubProcesses[{3, -3,25, 21, 21, 21}] = 13;
+  h3j_SubProcesses[{3, 4,25, 21, 3, 4}] = 1;
+  h3j_SubProcesses[{3, -4,25, 21, 3, -4}] = 2;
+  h3j_SubProcesses[{3, 5,25, 21, 3, 5}] = 1;
+  h3j_SubProcesses[{3, -5,25, 21, 3, -5}] = 2;
+  h3j_SubProcesses[{3, 21,25, 3, 1, -1}] = 3;
+  h3j_SubProcesses[{3, 21,25, 3, 2, -2}] = 3;
+  h3j_SubProcesses[{3, 21,25, 3, 3, -3}] = 22;
+  h3j_SubProcesses[{3, 21,25, 3, 4, -4}] = 3;
+  h3j_SubProcesses[{3, 21,25, 3, 5, -5}] = 3;
+  h3j_SubProcesses[{3, 21,25, 21, 21, 3}] = 14;
+  h3j_SubProcesses[{-3, 1,25, 21, 1, -3}] = 5;
+  h3j_SubProcesses[{-3, -1,25, 21, -1, -3}] = 9;
+  h3j_SubProcesses[{-3, 2,25, 21, 2, -3}] = 5;
+  h3j_SubProcesses[{-3, -2,25, 21, -3, -2}] = 6;
+  h3j_SubProcesses[{-3, 3,25, 21, 1, -1}] = 4;
+  h3j_SubProcesses[{-3, 3,25, 21, 2, -2}] = 4;
+  h3j_SubProcesses[{-3, 3,25, 21, 3, -3}] = 23;
+  h3j_SubProcesses[{-3, 3,25, 21, 4, -4}] = 4;
+  h3j_SubProcesses[{-3, 3,25, 21, 5, -5}] = 4;
+  h3j_SubProcesses[{-3, 3,25, 21, 21, 21}] = 15;
+  h3j_SubProcesses[{-3, -3,25, 21, -3, -3}] = 24;
+  h3j_SubProcesses[{-3, 4,25, 21, 4, -3}] = 5;
+  h3j_SubProcesses[{-3, -4,25, 21, -3, -4}] = 6;
+  h3j_SubProcesses[{-3, 5,25, 21, 5, -3}] = 5;
+  h3j_SubProcesses[{-3, -5,25, 21, -3, -5}] = 6;
+  h3j_SubProcesses[{-3, 21,25, -3, 1, -1}] = 7;
+  h3j_SubProcesses[{-3, 21,25, -3, 2, -2}] = 7;
+  h3j_SubProcesses[{-3, 21,25, 3, -3, -3}] = 25;
+  h3j_SubProcesses[{-3, 21,25, -3, 4, -4}] = 7;
+  h3j_SubProcesses[{-3, 21,25, -3, 5, -5}] = 7;
+  h3j_SubProcesses[{-3, 21,25, 21, 21, -3}] = 16;
+  h3j_SubProcesses[{4, 1,25, 21, 1, 4}] = 8;
+  h3j_SubProcesses[{4, -1,25, 21, 4, -1}] = 2;
+  h3j_SubProcesses[{4, 2,25, 21, 2, 4}] = 8;
+  h3j_SubProcesses[{4, -2,25, 21, 4, -2}] = 2;
+  h3j_SubProcesses[{4, 3,25, 21, 3, 4}] = 8;
+  h3j_SubProcesses[{4, -3,25, 21, 4, -3}] = 2;
+  h3j_SubProcesses[{4, 4,25, 21, 4, 4}] = 20;
+  h3j_SubProcesses[{4, -4,25, 21, 1, -1}] = 0;
+  h3j_SubProcesses[{4, -4,25, 21, 2, -2}] = 0;
+  h3j_SubProcesses[{4, -4,25, 21, 3, -3}] = 0;
+  h3j_SubProcesses[{4, -4,25, 21, 4, -4}] = 21;
+  h3j_SubProcesses[{4, -4,25, 21, 5, -5}] = 0;
+  h3j_SubProcesses[{4, -4,25, 21, 21, 21}] = 13;
+  h3j_SubProcesses[{4, 5,25, 21, 5, 4}] = 8;
+  h3j_SubProcesses[{4, -5,25, 21, 4, -5}] = 2;
+  h3j_SubProcesses[{4, 21,25, 4, 1, -1}] = 3;
+  h3j_SubProcesses[{4, 21,25, 4, 2, -2}] = 3;
+  h3j_SubProcesses[{4, 21,25, 4, 3, -3}] = 3;
+  h3j_SubProcesses[{4, 21,25, 4, 4, -4}] = 22;
+  h3j_SubProcesses[{4, 21,25, 4, 5, -5}] = 3;
+  h3j_SubProcesses[{4, 21,25, 21, 21, 4}] = 14;
+  h3j_SubProcesses[{-4, 1,25, 21, 1, -4}] = 5;
+  h3j_SubProcesses[{-4, -1,25, 21, -1, -4}] = 9;
+  h3j_SubProcesses[{-4, 2,25, 21, 2, -4}] = 5;
+  h3j_SubProcesses[{-4, -2,25, 21, -2, -4}] = 9;
+  h3j_SubProcesses[{-4, 3,25, 21, 3, -4}] = 5;
+  h3j_SubProcesses[{-4, -3,25, 21, -3, -4}] = 9;
+  h3j_SubProcesses[{-4, 4,25, 21, 1, -1}] = 4;
+  h3j_SubProcesses[{-4, 4,25, 21, 2, -2}] = 4;
+  h3j_SubProcesses[{-4, 4,25, 21, 3, -3}] = 4;
+  h3j_SubProcesses[{-4, 4,25, 21, 4, -4}] = 23;
+  h3j_SubProcesses[{-4, 4,25, 21, 5, -5}] = 4;
+  h3j_SubProcesses[{-4, 4,25, 21, 21, 21}] = 15;
+  h3j_SubProcesses[{-4, -4,25, 21, -4, -4}] = 24;
+  h3j_SubProcesses[{-4, 5,25, 21, 5, -4}] = 5;
+  h3j_SubProcesses[{-4, -5,25, 21, -5, -4}] = 9;
+  h3j_SubProcesses[{-4, 21,25, -4, 1, -1}] = 7;
+  h3j_SubProcesses[{-4, 21,25, -4, 2, -2}] = 7;
+  h3j_SubProcesses[{-4, 21,25, -4, 3, -3}] = 7;
+  h3j_SubProcesses[{-4, 21,25, 4, -4, -4}] = 25;
+  h3j_SubProcesses[{-4, 21,25, -4, 5, -5}] = 7;
+  h3j_SubProcesses[{-4, 21,25, 21, 21, -4}] = 16;
+  h3j_SubProcesses[{5, 1,25, 21, 1, 5}] = 8;
+  h3j_SubProcesses[{5, -1,25, 21, 5, -1}] = 2;
+  h3j_SubProcesses[{5, 2,25, 21, 5, 2}] = 1;
+  h3j_SubProcesses[{5, -2,25, 21, 5, -2}] = 2;
+  h3j_SubProcesses[{5, 3,25, 21, 3, 5}] = 8;
+  h3j_SubProcesses[{5, -3,25, 21, 5, -3}] = 2;
+  h3j_SubProcesses[{5, 4,25, 21, 5, 4}] = 1;
+  h3j_SubProcesses[{5, -4,25, 21, 5, -4}] = 2;
+  h3j_SubProcesses[{5, 5,25, 21, 5, 5}] = 20;
+  h3j_SubProcesses[{5, -5,25, 21, 1, -1}] = 0;
+  h3j_SubProcesses[{5, -5,25, 21, 2, -2}] = 0;
+  h3j_SubProcesses[{5, -5,25, 21, 3, -3}] = 0;
+  h3j_SubProcesses[{5, -5,25, 21, 4, -4}] = 0;
+  h3j_SubProcesses[{5, -5,25, 21, 5, -5}] = 21;
+  h3j_SubProcesses[{5, -5,25, 21, 21, 21}] = 13;
+  h3j_SubProcesses[{5, 21,25, 5, 1, -1}] = 3;
+  h3j_SubProcesses[{5, 21,25, 5, 2, -2}] = 3;
+  h3j_SubProcesses[{5, 21,25, 5, 3, -3}] = 3;
+  h3j_SubProcesses[{5, 21,25, 5, 4, -4}] = 3;
+  h3j_SubProcesses[{5, 21,25, 5, 5, -5}] = 22;
+  h3j_SubProcesses[{5, 21,25, 21, 21, 5}] = 14;
+  h3j_SubProcesses[{-5, 1,25, 21, 1, -5}] = 5;
+  h3j_SubProcesses[{-5, -1,25, 21, -1, -5}] = 9;
+  h3j_SubProcesses[{-5, 2,25, 21, 2, -5}] = 5;
+  h3j_SubProcesses[{-5, -2,25, 21, -5, -2}] = 6;
+  h3j_SubProcesses[{-5, 3,25, 21, 3, -5}] = 5;
+  h3j_SubProcesses[{-5, -3,25, 21, -3, -5}] = 9;
+  h3j_SubProcesses[{-5, 4,25, 21, 4, -5}] = 5;
+  h3j_SubProcesses[{-5, -4,25, 21, -5, -4}] = 6;
+  h3j_SubProcesses[{-5, 5,25, 21, 1, -1}] = 4;
+  h3j_SubProcesses[{-5, 5,25, 21, 2, -2}] = 4;
+  h3j_SubProcesses[{-5, 5,25, 21, 3, -3}] = 4;
+  h3j_SubProcesses[{-5, 5,25, 21, 4, -4}] = 4;
+  h3j_SubProcesses[{-5, 5,25, 21, 5, -5}] = 23;
+  h3j_SubProcesses[{-5, 5,25, 21, 21, 21}] = 15;
+  h3j_SubProcesses[{-5, -5,25, 21, -5, -5}] = 24;
+  h3j_SubProcesses[{-5, 21,25, -5, 1, -1}] = 7;
+  h3j_SubProcesses[{-5, 21,25, -5, 2, -2}] = 7;
+  h3j_SubProcesses[{-5, 21,25, -5, 3, -3}] = 7;
+  h3j_SubProcesses[{-5, 21,25, -5, 4, -4}] = 7;
+  h3j_SubProcesses[{-5, 21,25, 5, -5, -5}] = 25;
+  h3j_SubProcesses[{-5, 21,25, 21, 21, -5}] = 16;
+  h3j_SubProcesses[{21, 1,25, 1, 1, -1}] = 26;
+  h3j_SubProcesses[{21, 1,25, 1, 2, -2}] = 10;
+  h3j_SubProcesses[{21, 1,25, 1, 3, -3}] = 10;
+  h3j_SubProcesses[{21, 1,25, 1, 4, -4}] = 10;
+  h3j_SubProcesses[{21, 1,25, 1, 5, -5}] = 10;
+  h3j_SubProcesses[{21, 1,25, 21, 21, 1}] = 17;
+  h3j_SubProcesses[{21, -1,25, 1, -1, -1}] = 27;
+  h3j_SubProcesses[{21, -1,25, -1, 2, -2}] = 11;
+  h3j_SubProcesses[{21, -1,25, -1, 3, -3}] = 11;
+  h3j_SubProcesses[{21, -1,25, -1, 4, -4}] = 11;
+  h3j_SubProcesses[{21, -1,25, -1, 5, -5}] = 11;
+  h3j_SubProcesses[{21, -1,25, 21, 21, -1}] = 18;
+  h3j_SubProcesses[{21, 2,25, 2, 1, -1}] = 10;
+  h3j_SubProcesses[{21, 2,25, 2, 2, -2}] = 26;
+  h3j_SubProcesses[{21, 2,25, 2, 3, -3}] = 10;
+  h3j_SubProcesses[{21, 2,25, 2, 4, -4}] = 10;
+  h3j_SubProcesses[{21, 2,25, 2, 5, -5}] = 10;
+  h3j_SubProcesses[{21, 2,25, 21, 21, 2}] = 17;
+  h3j_SubProcesses[{21, -2,25, -2, 1, -1}] = 11;
+  h3j_SubProcesses[{21, -2,25, 2, -2, -2}] = 27;
+  h3j_SubProcesses[{21, -2,25, -2, 3, -3}] = 11;
+  h3j_SubProcesses[{21, -2,25, -2, 4, -4}] = 11;
+  h3j_SubProcesses[{21, -2,25, -2, 5, -5}] = 11;
+  h3j_SubProcesses[{21, -2,25, 21, 21, -2}] = 18;
+  h3j_SubProcesses[{21, 3,25, 3, 1, -1}] = 10;
+  h3j_SubProcesses[{21, 3,25, 3, 2, -2}] = 10;
+  h3j_SubProcesses[{21, 3,25, 3, 3, -3}] = 26;
+  h3j_SubProcesses[{21, 3,25, 3, 4, -4}] = 10;
+  h3j_SubProcesses[{21, 3,25, 3, 5, -5}] = 10;
+  h3j_SubProcesses[{21, 3,25, 21, 21, 3}] = 17;
+  h3j_SubProcesses[{21, -3,25, -3, 1, -1}] = 11;
+  h3j_SubProcesses[{21, -3,25, -3, 2, -2}] = 11;
+  h3j_SubProcesses[{21, -3,25, 3, -3, -3}] = 27;
+  h3j_SubProcesses[{21, -3,25, -3, 4, -4}] = 11;
+  h3j_SubProcesses[{21, -3,25, -3, 5, -5}] = 11;
+  h3j_SubProcesses[{21, -3,25, 21, 21, -3}] = 18;
+  h3j_SubProcesses[{21, 4,25, 4, 1, -1}] = 10;
+  h3j_SubProcesses[{21, 4,25, 4, 2, -2}] = 10;
+  h3j_SubProcesses[{21, 4,25, 4, 3, -3}] = 10;
+  h3j_SubProcesses[{21, 4,25, 4, 4, -4}] = 26;
+  h3j_SubProcesses[{21, 4,25, 4, 5, -5}] = 10;
+  h3j_SubProcesses[{21, 4,25, 21, 21, 4}] = 17;
+  h3j_SubProcesses[{21, -4,25, -4, 1, -1}] = 11;
+  h3j_SubProcesses[{21, -4,25, -4, 2, -2}] = 11;
+  h3j_SubProcesses[{21, -4,25, -4, 3, -3}] = 11;
+  h3j_SubProcesses[{21, -4,25, 4, -4, -4}] = 27;
+  h3j_SubProcesses[{21, -4,25, -4, 5, -5}] = 11;
+  h3j_SubProcesses[{21, -4,25, 21, 21, -4}] = 18;
+  h3j_SubProcesses[{21, 5,25, 5, 1, -1}] = 10;
+  h3j_SubProcesses[{21, 5,25, 5, 2, -2}] = 10;
+  h3j_SubProcesses[{21, 5,25, 5, 3, -3}] = 10;
+  h3j_SubProcesses[{21, 5,25, 5, 4, -4}] = 10;
+  h3j_SubProcesses[{21, 5,25, 5, 5, -5}] = 26;
+  h3j_SubProcesses[{21, 5,25, 21, 21, 5}] = 17;
+  h3j_SubProcesses[{21, -5,25, -5, 1, -1}] = 11;
+  h3j_SubProcesses[{21, -5,25, -5, 2, -2}] = 11;
+  h3j_SubProcesses[{21, -5,25, -5, 3, -3}] = 11;
+  h3j_SubProcesses[{21, -5,25, -5, 4, -4}] = 11;
+  h3j_SubProcesses[{21, -5,25, 5, -5, -5}] = 27;
+  h3j_SubProcesses[{21, -5,25, 21, 21, -5}] = 18;
+  h3j_SubProcesses[{21, 21,25, 21, 1, -1}] = 19;
+  h3j_SubProcesses[{21, 21,25, 21, 2, -2}] = 19;
+  h3j_SubProcesses[{21, 21,25, 21, 3, -3}] = 19;
+  h3j_SubProcesses[{21, 21,25, 21, 4, -4}] = 19;
+  h3j_SubProcesses[{21, 21,25, 21, 5, -5}] = 19;
+  h3j_SubProcesses[{21, 21,25, 21, 21, 21}] = 12;
+    
   return; 
 }

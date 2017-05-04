@@ -9,8 +9,15 @@ import time
 import subprocess
 import argparse
 
+# python 2.4 does not have any and all
+try: any, all
+except NameError:
+    any = lambda x: reduce(lambda a,b: a or b, x)
+    all = lambda x: reduce(lambda a,b: a and b, x)
 
-def global_init():
+###
+
+def global_init(param):
 
     global ROOT
     try:
@@ -19,15 +26,35 @@ def global_init():
     except NameError:
         pass
     import ROOT
-    
-    noolp = False
 
-    if noolp:
+    # add NtupleAnalyzer directory to macro path
+    try:
+        ntupleanalyzer_path = os.path.abspath(os.path.dirname(__file__))
+        if not ntupleanalyzer_path:
+            ntupleanalyzer_path = param.sourcepath
+            if not ntupleanalyzer_path:
+                raise ValueError('Empty path to NtupleAnalyzer source: add it to input with --sourcepath=<your_path>')
+    except ValueError as e:
+        print (e)
+        sys.exit(2)
+
+    ROOT.gROOT.SetMacroPath(ROOT.gROOT.GetMacroPath().rstrip(':') + ':' + ntupleanalyzer_path)
+    ROOT.gSystem.AddIncludePath("-Wno-deprecated-declarations")
+
+    # further macros and libraries to load:
+    if param.noolp:
         ROOT.gSystem.AddIncludePath("-DDISABLE_OLP")
 
     else:
-        ROOT.gSystem.Load("libgolem_olp_heft.so")
-        ROOT.gSystem.Load("libgolem_olp_full.so")
+        if param.multip == 1:
+            ROOT.gSystem.Load("libgolem_olp_heft_h1j.so")
+            ROOT.gSystem.Load("libgolem_olp_full_h1j.so")
+        if param.multip == 2:
+            ROOT.gSystem.Load("libgolem_olp_heft_h2j.so")
+            ROOT.gSystem.Load("libgolem_olp_full_h2j.so")
+        if param.multip == 3:
+            ROOT.gSystem.Load("libgolem_olp_heft_h3j.so")
+            ROOT.gSystem.Load("libgolem_olp_full_h3j.so")
 
     ROOT.gSystem.Load("libRIO.so")
     ROOT.gSystem.Load("libTreePlayer.so")
@@ -43,16 +70,13 @@ def global_init():
     ROOT.gROOT.LoadMacro("TSelectorReader.C+")
 
 
-
-
-
 def main(param):
 
     # Store starting time:
     start_time = time.time()
 
     # Initialize can compile in ROOT:
-    global_init()
+    global_init(param)
 
     # We want to handle Ctrl+C
     sh = ROOT.TSignalHandler(ROOT.kSigInterrupt, False)
@@ -93,21 +117,35 @@ def main(param):
 
         for name in param.filenames:
 
+            #// Output file and folder management:
             infolder, fname = os.path.split(name)
-
             if not param.outfolder:
                 folder = infolder
             else:
                 folder = param.outfolder
+                os.path.splitext(fname)[0]
+            
+            cname = folder+"/"+os.path.splitext(fname)[0]+param.suffix
+            ext   = os.path.splitext(fname)[1]
+            idx   = 0
+
+            if os.path.isfile(cname+ext):
+                ncname = cname
+                while os.path.isfile(ncname+ext):
+                    idx = idx + 1
+                    ncname = cname+"_"+str(idx)
+
+                cname = ncname
 
             #// Define reader selector:
             rw_reader = ROOT.TSelectorReader()
 
             #// -- Reweight Selectors:
-            ReweightSelector = ROOT.TSelectorWrite()
-            ReweightSelector.debug=param.debug
-            ReweightSelector.SetFileName(folder,fname,param.suffix)
+            ReweightSelector = ROOT.TSelectorWrite(param.multip)
+            ReweightSelector.debug  = param.debug
+            ReweightSelector.SetFileName(cname,ext)
             ReweightSelector.SetParameters(5.0,172.3,0.0,0.0)
+            #ReweightSelector.SetParameters(5.0,172.3,4.75,3.38)
             rw_reader.addSelector(ReweightSelector)
             
             rw_chain = ROOT.TChain("t3")
@@ -140,13 +178,18 @@ class Parameters:
         parser_ana.add_argument("-o", "--output", dest="OUTPUT", default="plots.root", help="name of  [plots]")
         parser_ana.add_argument("-f", "--folder", dest="FOLDER", default="", help="Output folder if different from input ones")
         parser_ana.add_argument("-e", "--events", dest="EVENTS", default=-1, help="Number of events to be processed [all]")
+        parser_ana.add_argument("--debug",  dest="DEBUG", default=False, action='store_const', const=True, help="Generate debug output [False]")
+        parser_ana.add_argument("--sourcepath", dest="SOURCEPATH", default="", help="Path to the source of NtupleAnalyzer code")
 
         parser_rwgt = subparser.add_parser('reweight', help='reweight help (add this mode for more specific help)')
+        parser_rwgt.add_argument("-m", "--multip", dest="MULTIP", required=True, help="Multiplicity of process to reweight: h1j, h2j, h3j")
         parser_rwgt.add_argument("-s", "--suffix", dest="SUFFIX", default="_new", help="Suffix for output file name [_new]")
         parser_rwgt.add_argument("-o", "--output", dest="OUTPUT", default="", help="Output file name. By default the input file name is used with suffix '_new'")
         parser_rwgt.add_argument("-f", "--folder", dest="FOLDER", default="", help="Output folder if different from input ones")
         parser_rwgt.add_argument("-e", "--events", dest="EVENTS", default=-1, help="Number of events to be processed [all]")
-        parser_rwgt.add_argument("-d", "--debug",  dest="DEBUG", default=False, help="Generate debug output [False]")
+        parser_rwgt.add_argument("--debug",  dest="DEBUG", default=False, action='store_const', const=True, help="Generate debug output [False]")
+        parser_rwgt.add_argument("--sourcepath", dest="SOURCEPATH", default="", help="Path to the source of NtupleAnalyzer code")
+        parser_rwgt.add_argument("--noolp",  dest="NOOLP", default=False, action='store_const', const=True, help="Run without link to OLP library [False]")
         
         parser.add_argument('INPUTFILES', nargs='+', metavar='Ntuple.root', help='One or more Root NTuple input files. When more than one input file is given, the files are processed one after the other.')
         #parser.add_argument("-s","--show", action='store_true', dest="SHOW", default=False, help="show results in default web browser [NO]")
@@ -157,18 +200,30 @@ class Parameters:
         #parser.add_argument("-q", "--quiet", action="store_const", const=logging.WARNING, dest="LOGLEVEL", default=logging.INFO, help="be very quiet [NO]")
         #parser.add_argument("-p", "--prefix", dest="PREFIX", default="xxx", help="prefix to histogram file names")
     
-        args       = parser.parse_args()
-        self.mode      = args.MODE
-        self.filenames = args.INPUTFILES
-        self.suffix    = args.SUFFIX
-        self.outfolder = args.FOLDER
-        self.events    = args.EVENTS
-        self.debug     = args.DEBUG
+        args            = parser.parse_args()
+        self.mode       = args.MODE
+        self.filenames  = args.INPUTFILES
+        self.multip     = int(args.MULTIP)
+        self.suffix     = args.SUFFIX
+        self.outfolder  = args.FOLDER
+        self.events     = args.EVENTS
+        self.debug      = args.DEBUG
+        self.sourcepath = args.SOURCEPATH
+        self.noolp      = args.NOOLP
+
+        if self.mode == 'analysis':
+            self.noolp = True
 
         if self.outfolder:
             if not os.path.isdir(self.outfolder):
                 print "Output folder does not exist, creating it.."
                 os.makedirs(self.outfolder)
+
+        try:
+            value = int(self.multip)
+        except ValueError:
+            print "Multiplicity must be an integer: 1,2 or 3"
+            sys.exit(2)
   
         self.filenames.sort()
 
@@ -179,7 +234,7 @@ class Parameters:
         print "--    SETUP PARAMETERS      --"
         print "------------------------------"
         print ""
-        print " MODE: ", self.mode
+        print (" MODE: {0} for Higgs + {1} jet(s)".format(str(self.mode), str(self.multip)))
         print ""
         print " INPUT FILES:"
         for i in self.filenames:
@@ -209,6 +264,6 @@ if __name__ == '__main__':
 
 # Example of lauch command for reweighting:
 #
-#     ./NtupleAnalyzer reweight --folder=EDNTuplesFiles_New --suffix=_mt172.3_mb0.0 EDNTuplesFiles/H1.0j_amegic_GGFHT_B_6500_pt25.0_eta4.5_r100_100.root
+#     ./NtupleAnalyzer reweight --m 1 --events=10 --folder=EDNTuplesFiles_New --suffix=_mt172.3_mb0.0 EDNTuplesFiles/H1.0j_amegic_GGFHT_B_6500_pt25.0_eta4.5_r100_100.root
 #
 #

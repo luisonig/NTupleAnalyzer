@@ -111,7 +111,7 @@ Bool_t TSelectorReader::Notify()
    // user if needed. The return value is currently not used.
 
   if (fChain && fChain->GetCurrentFile()) {
-    std::cout << "File: " << fChain->GetCurrentFile()->GetName() << std::endl;
+    std::cout << "Input file: " << fChain->GetCurrentFile()->GetName() << std::endl;
 
     for (unsigned i = 0; i < selectors.size(); i++) {
       // std::cout<<"Processing selector of type:"<<selectors[i]->Type()<<std::endl;
