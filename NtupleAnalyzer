@@ -182,7 +182,7 @@ class Parameters:
         parser_ana.add_argument("--sourcepath", dest="SOURCEPATH", default="", help="Path to the source of NtupleAnalyzer code")
 
         parser_rwgt = subparser.add_parser('reweight', help='reweight help (add this mode for more specific help)')
-        parser_rwgt.add_argument("-m", "--multip", dest="MULTIP", required=True, help="Multiplicity of process to reweight: h1j, h2j, h3j")
+        parser_rwgt.add_argument("-m", "--multip", dest="MULTIP", required=True, help="Multiplicity of process to reweight: 1, 2, 3")
         parser_rwgt.add_argument("-s", "--suffix", dest="SUFFIX", default="_new", help="Suffix for output file name [_new]")
         parser_rwgt.add_argument("-o", "--output", dest="OUTPUT", default="", help="Output file name. By default the input file name is used with suffix '_new'")
         parser_rwgt.add_argument("-f", "--folder", dest="FOLDER", default="", help="Output folder if different from input ones")
