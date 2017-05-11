@@ -125,9 +125,18 @@ def main(param):
                 folder = param.outfolder
                 os.path.splitext(fname)[0]
             
-            cname = folder+"/"+os.path.splitext(fname)[0]+param.suffix
-            ext   = os.path.splitext(fname)[1]
+            if not param.outfile:    
+                fnamebas = os.path.splitext(fname)[0].split('_r')[0]
+                fnameran = os.path.splitext(fname)[0].split('_r')[1]
+                newfname = fnamebas+param.suffix+'_r'+fnameran
+                ext      = os.path.splitext(fname)[1]
+            else:
+                newfname = os.path.splitext(param.outfile)[0]
+                ext      = os.path.splitext(param.outfile)[1]
+
+            cname = folder+"/"+newfname
             idx   = 0
+
 
             if os.path.isfile(cname+ext):
                 ncname = cname
@@ -175,7 +184,9 @@ class Parameters:
         subparser = parser.add_subparsers(dest='MODE', help='Program running mode: analysis or reweight')
 
         parser_ana = subparser.add_parser('analysis', help='analysis help (add this mode for more specific help)')
-        parser_ana.add_argument("-o", "--output", dest="OUTPUT", default="plots.root", help="name of  [plots]")
+        parser_ana.add_argument("-m", "--multip", dest="MULTIP", required=True, help="Multiplicity of process to reweight: 1, 2, 3")
+        parser_ana.add_argument("-s", "--suffix", dest="SUFFIX", default="_new", help="Suffix for output file name [_new]")
+        parser_ana.add_argument("-o", "--output", dest="OUTPUT", default="plots.root", help="name of output file [plots.root]")
         parser_ana.add_argument("-f", "--folder", dest="FOLDER", default="", help="Output folder if different from input ones")
         parser_ana.add_argument("-e", "--events", dest="EVENTS", default=-1, help="Number of events to be processed [all]")
         parser_ana.add_argument("--debug",  dest="DEBUG", default=False, action='store_const', const=True, help="Generate debug output [False]")
@@ -205,14 +216,16 @@ class Parameters:
         self.filenames  = args.INPUTFILES
         self.multip     = int(args.MULTIP)
         self.suffix     = args.SUFFIX
+        self.outfile    = args.OUTPUT
         self.outfolder  = args.FOLDER
         self.events     = args.EVENTS
         self.debug      = args.DEBUG
         self.sourcepath = args.SOURCEPATH
-        self.noolp      = args.NOOLP
 
         if self.mode == 'analysis':
             self.noolp = True
+        else:
+            self.noolp = args.NOOLP
 
         if self.outfolder:
             if not os.path.isdir(self.outfolder):
@@ -245,7 +258,10 @@ class Parameters:
             print "   folder: not specified, use same as input-file folder"
         else:
             print "   folder: ", self.outfolder
-        print "   suffix: ", self.suffix
+        if not self.outfile:
+            print "   suffix: ", self.suffix
+        else:
+            print "   file name: ", self.outfile
         print ""
         if self.events < 0:
             print " EVENTS: all"
