@@ -298,6 +298,6 @@ if __name__ == '__main__':
 
 # Example of lauch command for reweighting:
 #
-#     ./NtupleAnalyzer reweight --m 1 --events=10 --folder=EDNTuplesFiles_New --suffix=_mt172.3_mb0.0 EDNTuplesFiles/H1.0j_amegic_GGFHT_B_6500_pt25.0_eta4.5_r100_100.root
+#     ./NtupleAnalyzer reweight -m 2 --debug --events=10 --output=test.root EDNTuplesFiles/H2.0j_amegic_GGFHT_B_6500_pt25.0_eta4.5_CT10nlo_r100_100.root
 #
 #

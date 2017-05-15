@@ -484,15 +484,21 @@ int TSelectorWrite::CheckPoint(double heft_wgt, double full_wgt)
     return 1;
   }
 
-  if (full_wgt != full_wgt) {
-    full_wgt = 0.0;
-    std::cout<<"WARNING: NaN detected"<<std::endl;
-    return 1;
-  }
+  // if (full_wgt != full_wgt) {
+  //   full_wgt = 0.0;
+  //   std::cout<<"WARNING: NaN detected"<<std::endl;
+  //   return 1;
+  // }
   
-  if (abs(full_wgt) == std::numeric_limits<double>::infinity()) {
+  // if (abs(full_wgt) == std::numeric_limits<double>::infinity()) {
+  //   full_wgt = 0.0;
+  //   std::cout<<"WARNING: INF detected"<<std::endl;
+  //   return 1;
+  // }
+
+  if (not isfinite(full_wgt)) {
     full_wgt = 0.0;
-    std::cout<<"WARNING: INF detected"<<std::endl;       
+    std::cout<<"WARNING: INF/NaN detected"<<std::endl;
     return 1;
   }
   
