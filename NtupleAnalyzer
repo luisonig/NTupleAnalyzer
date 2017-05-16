@@ -49,6 +49,7 @@ def global_init(param):
         if param.multip == 1:
             ROOT.gSystem.Load("libgolem_olp_heft_h1j.so")
             ROOT.gSystem.Load("libgolem_olp_full_h1j.so")
+            #ROOT.gSystem.Load("libgolem_olp_full_h1j_qp.so")
         if param.multip == 2:
             ROOT.gSystem.Load("libgolem_olp_heft_h2j.so")
             ROOT.gSystem.Load("libgolem_olp_full_h2j.so")
