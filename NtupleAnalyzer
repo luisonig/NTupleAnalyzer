@@ -78,11 +78,6 @@ def main(param):
     # Initialize can compile in ROOT:
     global_init(param)
 
-    if param.mode == 'dryrun':
-        print "--> All done! "
-        print "------------------------------"
-        sys.exit()
-
     # We want to handle Ctrl+C
     sh = ROOT.TSignalHandler(ROOT.kSigInterrupt, False)
     sh.Add()
@@ -206,8 +201,6 @@ class Parameters:
         parser_rwgt.add_argument("--debug",  dest="DEBUG", default=False, action='store_const', const=True, help="Generate debug output [False]")
         parser_rwgt.add_argument("--sourcepath", dest="SOURCEPATH", default="", help="Path to the source of NtupleAnalyzer code")
         parser_rwgt.add_argument("--noolp",  dest="NOOLP", default=False, action='store_const', const=True, help="Run without link to OLP library [False]")
-        
-        parser_dry = subparser.add_parser('dryrun', help='perform dry run - only compile root files')
 
         parser.add_argument('INPUTFILES', nargs='+', metavar='Ntuple.root', help='One or more Root NTuple input files. When more than one input file is given, the files are processed one after the other.')
         #parser.add_argument("-s","--show", action='store_true', dest="SHOW", default=False, help="show results in default web browser [NO]")
@@ -220,11 +213,6 @@ class Parameters:
     
         args            = parser.parse_args()
         self.mode       = args.MODE
-
-        if self.mode == 'dryrun':
-            self.noolp = True
-            return
-
         self.filenames  = args.INPUTFILES
         self.multip     = int(args.MULTIP)
         self.suffix     = args.SUFFIX
@@ -254,12 +242,6 @@ class Parameters:
 
 
     def print_parameters(self):
-
-        if self.mode == 'dryrun':
-            print "------------------------------"
-            print "--> Compiling root files ...  "
-            return
-
 
         print "------------------------------"
         print "--    SETUP PARAMETERS      --"
