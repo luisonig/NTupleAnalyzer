@@ -158,7 +158,7 @@ def main(param):
             ReweightSelector = ROOT.TSelectorWrite(param.multip)
             ReweightSelector.debug  = param.debug
             ReweightSelector.SetFileName(cname,ext)
-            ReweightSelector.SetParameters(5.0,172.3,0.0,0.0)
+            ReweightSelector.SetParameters(5.0,171.2,0.0,0.0)
             #ReweightSelector.SetParameters(5.0,172.3,4.75,3.38)
             rw_reader.addSelector(ReweightSelector)
             

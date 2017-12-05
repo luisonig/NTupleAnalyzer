@@ -205,22 +205,27 @@ int TSelectorWrite::InitializeOLP()
   stringstream ss;
   ss<<fixed<<setprecision(12)<<mW;
   const string mW_str = "mW=" + ss.str();
+  const string mW_str_full = "mdlMW=" + ss.str();
 
   ss.str(std::string());
   ss<<fixed<<setprecision(12)<<mZ;
   const string mZ_str = "mZ=" + ss.str();
+  const string mZ_str_full = "mdlMZ=" + ss.str();
 
   ss.str(std::string());
   ss<<fixed<<setprecision(12)<<sw;
   const string sw_str = "sw=" + ss.str();
+  const string sw_str_full = "mdlsw=" + ss.str();
   
   ss.str(std::string());
   ss<<fixed<<setprecision(12)<<mT;
-  const string mT_str = "mT=" + ss.str();  
+  const string mT_str = "mT=" + ss.str();
+  const string mT_str_full = "mdlMT=" + ss.str();    
   
   ss.str(std::string());
   ss<<fixed<<setprecision(12)<<mB;
-  const string mB_str = "mB=" + ss.str();   
+  const string mB_str = "mB=" + ss.str();
+  const string mB_str_full = "mdlMB=" + ss.str();   
   
   ss.str(std::string());
   ss<<fixed<<setprecision(12)<<mBMS;
@@ -230,6 +235,23 @@ int TSelectorWrite::InitializeOLP()
   ss<<fixed<<setprecision(12)<<Nf;
   const string Nf_str = "Nf=" + ss.str();
 
+
+  //const string mdlmsd3_str_full = "mdlMsd3=10000.0" ;   
+  //const string mdlmsd6_str_full = "mdlMsd6=10000.0" ;
+  //const string mdlmsu3_str_full = "mdlMsu3=10000.0" ;     
+  //const string mdlmsu6_str_full = "mdlMsu6=10000.0" ;
+  const string mdlmh01_str_full = "mdlMH=125.0" ;  
+  const string mdlmtp_str_full = "mdlMTP=250.0";
+  const string mdlwt_str_full= "mdlWT=0.0";
+//   const string mdlmsd3_str_full = "mdlMsd3=171.2" ;
+//   const string mdlmsu3_str_full = "mdlMsu3=171.2" ;  
+//   const string mdlmsd6_str_full = "mdlMsd6=171.2" ;  
+//   const string mdlmsu6_str_full = "mdlMsu6=171.2" ;  
+//   const string mdlwsu6_str_full = "mdlWsu6=0.0";
+//   const string mdlwsd6_str_full = "mdlWsd6=0.0";
+//   const string mdlwsu3_str_full = "mdlWsu3=0.0";
+//   const string mdlwsd3_str_full = "mdlWsd3=0.0";
+  
   
 #ifndef DISABLE_OLP
   heft_OLP_Option(mZ_str.c_str(), &ierr);
@@ -238,12 +260,25 @@ int TSelectorWrite::InitializeOLP()
   heft_OLP_Option(mBMS_str.c_str(), &ierr);
   
   //std::cout<<"------------->"<<mB_str<<std::endl;
-  full_OLP_Option(Nf_str.c_str(), &ierr);  
-  full_OLP_Option(mZ_str.c_str(), &ierr);
-  full_OLP_Option(mW_str.c_str(), &ierr);
-  full_OLP_Option(mT_str.c_str(), &ierr);    
-  full_OLP_Option(mB_str.c_str(), &ierr); 
-  full_OLP_Option(mBMS_str.c_str(), &ierr);
+//   full_OLP_Option(Nf_str.c_str(), &ierr);  
+//   full_OLP_Option(mZ_str_full.c_str(), &ierr);
+//   full_OLP_Option(mW_str_full.c_str(), &ierr);
+   full_OLP_Option(mT_str_full.c_str(), &ierr);    
+//   full_OLP_Option(mB_str_full.c_str(), &ierr); 
+  
+  
+  //full_OLP_Option(mBMS_str.c_str(), &ierr);
+//   full_OLP_Option(mdlmsd3_str_full.c_str(), &ierr); 
+//   full_OLP_Option(mdlmsd6_str_full.c_str(), &ierr); 
+//   full_OLP_Option(mdlmsu3_str_full.c_str(), &ierr); 
+//   full_OLP_Option(mdlmsu6_str_full.c_str(), &ierr);
+//   full_OLP_Option(mdlwsu6_str_full.c_str(), &ierr);
+//   full_OLP_Option(mdlwsd6_str_full.c_str(), &ierr);   
+//   full_OLP_Option(mdlwsu3_str_full.c_str(), &ierr); 
+//   full_OLP_Option(mdlwsd3_str_full.c_str(), &ierr);   
+  full_OLP_Option(mdlmh01_str_full.c_str(), &ierr);
+  full_OLP_Option(mdlmtp_str_full.c_str(), &ierr); 
+  full_OLP_Option(mdlwt_str_full.c_str(), &ierr);
 
   switch(multip){
   case 1:
@@ -395,6 +430,7 @@ void TSelectorWrite::Reweight()
   case 1:
     heft_OLP_EvalSubProcess(h1j_SubProcesses[flavlist4], momenta, orig_ren_scale(), params, res_heft);
     full_OLP_EvalSubProcess(h1j_SubProcesses[flavlist4], momenta, orig_ren_scale(), params, res_full);
+    //std::cout<<res_full[0]<<" "<<res_full[1]<<" "<<res_full[2]<<std::endl;
     break;
   case 2:
     heft_OLP_EvalSubProcess(h2j_SubProcesses[flavlist5], momenta, orig_ren_scale(), params, res_heft);
@@ -419,10 +455,15 @@ void TSelectorWrite::Reweight()
 
   switch(multip){
   case 1:
+    double gs_ufo,e_ufo;
+    gs_ufo=1.219777963704922;
+    e_ufo=0.31345100004952897;      
     // for heft take Born
-    heft_wgt = orig_ps_wgt()*res_heft[3]*pow(gs,6)*e2;
+    heft_wgt = orig_ps_wgt()*res_heft[3]*pow(gs,6)*e2;//*pow(gs_ufo,6)*pow(e_ufo,2);//*pow(gs,6)*e2;
     // for full take finite part of loop induced
-    full_wgt = orig_ps_wgt()*res_full[2]*(2.*pi)*pow(gs,6)*e2/64.0/pow(pi,4);
+    //full_wgt = orig_ps_wgt()*res_full[2]*(2.*pi)*pow(gs_ufo,6)*pow(e_ufo,2)/64.0/pow(pi,4);
+    full_wgt = orig_ps_wgt()*res_full[2]*(2.*pi)/64.0/pow(pi,4)/pow(gs_ufo,6)/pow(e_ufo,2)*pow(gs,6)*e2;
+    //std::cout<<heft_wgt<<" "<<full_wgt<<std::endl;
     break;
   case 2:
     // for heft take Born
@@ -448,6 +489,8 @@ void TSelectorWrite::Reweight()
     std::cout<<"ratio heft/orig = "<<heft_wgt/orig_me_wgt()<<std::endl;
     std::cout<<"ratio heft/full = "<<heft_wgt/full_wgt<<std::endl;
     std::cout<<"ratio full/orig = "<<full_wgt/orig_me_wgt()<<std::endl;
+    std::cout<<"full_me ="<<full_wgt/orig_ps_wgt()<<std::endl;
+    std::cout<<"orig_me ="<<orig_me_wgt()/orig_ps_wgt()<<std::endl;
     std::cout<<" "<<std::endl;
   }
   
@@ -461,6 +504,7 @@ void TSelectorWrite::Reweight()
   int check = CheckPoint(heft_wgt, full_wgt);
   if (check != 0){
     std::cout<<"Unstable point, set to zero."<<std::endl;
+    full_wgt=0.0;
   }
 
   CopyEvent(0);
@@ -478,11 +522,11 @@ void TSelectorWrite::Reweight()
 
 int TSelectorWrite::CheckPoint(double heft_wgt, double full_wgt)
 {
-  if (abs(heft_wgt/orig_me_wgt()-1.0) > 1e-5){
-    full_wgt = 0.0;
-    std::cout<<"WARNING: Born ratio unstable"<<std::endl;
-    return 1;
-  }
+//  if (abs(heft_wgt/orig_me_wgt()-1.0) > 1e-5){
+//    full_wgt = 0.0;
+//    std::cout<<"WARNING: Born ratio unstable"<<std::endl;
+//    return 1;
+//  }
 
   // if (full_wgt != full_wgt) {
   //   full_wgt = 0.0;
@@ -502,7 +546,7 @@ int TSelectorWrite::CheckPoint(double heft_wgt, double full_wgt)
     return 1;
   }
   
-  if (abs(full_wgt/full_wgt) > 50.0) {
+  if (abs(full_wgt/heft_wgt) > 100.0) {
     full_wgt = 0.0;
     std::cout<<"WARNING: K-factor check failed"<<std::endl;
     return 1;
