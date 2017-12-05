@@ -1,0 +1,286 @@
+#!/usr/bin/env python
+
+import sys
+import os
+import re
+import imp
+import glob
+import time
+import subprocess
+import argparse
+
+# python 2.4 does not have any and all
+try: any, all
+except NameError:
+    any = lambda x: reduce(lambda a,b: a or b, x)
+    all = lambda x: reduce(lambda a,b: a and b, x)
+
+###
+
+def global_init(param):
+
+    global ROOT
+    try:
+        ROOT
+        return
+    except NameError:
+        pass
+    import ROOT
+
+    # add NtupleAnalyzer directory to macro path
+    try:
+        ntupleanalyzer_path = os.path.abspath(os.path.dirname(__file__))
+        if not ntupleanalyzer_path:
+            ntupleanalyzer_path = param.sourcepath
+            if not ntupleanalyzer_path:
+                raise ValueError('Empty path to NtupleAnalyzer source: add it to input with --sourcepath=<your_path>')
+    except ValueError as e:
+        print (e)
+        sys.exit(2)
+
+    ROOT.gROOT.SetMacroPath(ROOT.gROOT.GetMacroPath().rstrip(':') + ':' + ntupleanalyzer_path)
+    ROOT.gSystem.AddIncludePath("-Wno-deprecated-declarations")
+
+    # further macros and libraries to load:
+    if param.noolp:
+        ROOT.gSystem.AddIncludePath("-DDISABLE_OLP")
+
+    else:
+        if param.multip == 1:
+            ROOT.gSystem.Load("libgolem_olp_heft_h1j.so")
+            ROOT.gSystem.Load("libgolem_olp_full_h1j.so")
+            #ROOT.gSystem.Load("libgolem_olp_full_h1j_qp.so")
+        if param.multip == 2:
+            ROOT.gSystem.Load("libgolem_olp_heft_h2j.so")
+            ROOT.gSystem.Load("libgolem_olp_full_h2j.so")
+        if param.multip == 3:
+            ROOT.gSystem.Load("libgolem_olp_heft_h3j.so")
+            ROOT.gSystem.Load("libgolem_olp_full_h3j.so")
+
+    ROOT.gSystem.Load("libRIO.so")
+    ROOT.gSystem.Load("libTreePlayer.so")
+    ROOT.gPluginMgr.AddHandler("TVirtualStreamerInfo", "*", "TStreamerInfo", "RIO", "TStreamerInfo()")
+    ROOT.gPluginMgr.AddHandler("TVirtualTreePlayer", "*", "TTreePlayer", "TreePlayer", "TTreePlayer()");
+
+    ROOT.gSystem.Load("libfastjet.so")
+    # ROOT.gSystem.Load("libLHAPDF.so")
+    # ROOT.gROOT.LoadMacro("LHAGlue.h+")
+    ROOT.gROOT.LoadMacro("TSelectorMain.C+")
+    ROOT.gROOT.LoadMacro("TSelectorAnalyzer.C+")
+    ROOT.gROOT.LoadMacro("TSelectorWrite.C+")
+    ROOT.gROOT.LoadMacro("TSelectorReader.C+")
+
+
+def main(param):
+
+    # Store starting time:
+    start_time = time.time()
+
+    # Initialize can compile in ROOT:
+    global_init(param)
+
+    # We want to handle Ctrl+C
+    sh = ROOT.TSignalHandler(ROOT.kSigInterrupt, False)
+    sh.Add()
+    sh.Connect("Notified()", "TROOT", ROOT.gROOT, "SetInterrupt()")
+
+    # *****************************************************
+    #// Perform analysis of NTuples:
+    # *****************************************************
+
+    if param.mode == 'analysis':
+
+        #// Define reader selector:
+        an_reader = ROOT.TSelectorReader()
+
+        #// Analysis Selectors:
+        AnalyzerSelector = ROOT.TSelectorAnalyzer()
+        an_reader.addSelector(AnalyzerSelector)
+
+        #// Define chain and add file list:
+        chain = ROOT.TChain("t3")
+        for name in param.filenames:
+            chain.Add(name)
+
+        #// Start processing the chain:
+        chain.GetFile()  # force opening of the first file
+        chain.SetMaxEntryLoop(2**60)
+        chain.Process(an_reader, "", chain.GetMaxEntryLoop(), 0)
+
+
+    # *****************************************************
+    #// Perform reweight of NTuples:
+    # *****************************************************
+
+    if param.mode == 'reweight':
+
+        #// If need to reweight we need a chain for every file:
+
+        for name in param.filenames:
+
+            #// Output file and folder management:
+            infolder, fname = os.path.split(name)
+            if not param.outfolder:
+                folder = infolder
+            else:
+                folder = param.outfolder
+                os.path.splitext(fname)[0]
+            
+            if not param.outfile:    
+                fnamebas = os.path.splitext(fname)[0].split('_r')[0]
+                fnameran = os.path.splitext(fname)[0].split('_r')[1]
+                newfname = fnamebas+param.suffix+'_r'+fnameran
+                ext      = os.path.splitext(fname)[1]
+            else:
+                newfname = os.path.splitext(param.outfile)[0]
+                ext      = os.path.splitext(param.outfile)[1]
+
+            cname = folder+"/"+newfname
+            idx   = 0
+
+
+            if os.path.isfile(cname+ext):
+                ncname = cname
+                while os.path.isfile(ncname+ext):
+                    idx = idx + 1
+                    ncname = cname+"_"+str(idx)
+
+                cname = ncname
+
+            #// Define reader selector:
+            rw_reader = ROOT.TSelectorReader()
+
+            #// -- Reweight Selectors:
+            ReweightSelector = ROOT.TSelectorWrite(param.multip)
+            ReweightSelector.debug  = param.debug
+            ReweightSelector.SetFileName(cname,ext)
+            ReweightSelector.SetParameters(5.0,171.2,0.0,0.0)
+            #ReweightSelector.SetParameters(5.0,172.3,4.75,3.38)
+            rw_reader.addSelector(ReweightSelector)
+            
+            rw_chain = ROOT.TChain("t3")
+            rw_chain.Add(name)
+            
+            #// Start processing the chain:
+            rw_chain.GetFile()  # force opening of the first file
+            rw_chain.SetMaxEntryLoop(2**60)
+            if param.events < 0:
+                rw_chain.Process(rw_reader, "", rw_chain.GetMaxEntryLoop(), 0)
+            else:
+                rw_chain.Process(rw_reader, "", int(param.events), 0)
+
+
+    print "Run time: %d seconds" % (time.time() - start_time)
+
+    sys.exit()
+
+
+class Parameters:
+
+    def __init__(self):
+        
+        ## Argument parser
+
+        parser = argparse.ArgumentParser(description='NLO NTuples analysis tool.') #,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        subparser = parser.add_subparsers(dest='MODE', help='Program running mode: analysis, reweight or dryrun')
+
+        parser_ana = subparser.add_parser('analysis', help='analysis help (add this mode for more specific help)')
+        parser_ana.add_argument("-m", "--multip", dest="MULTIP", required=True, help="Multiplicity of process to reweight: 1, 2, 3")
+        parser_ana.add_argument("-s", "--suffix", dest="SUFFIX", default="_new", help="Suffix for output file name [_new]")
+        parser_ana.add_argument("-o", "--output", dest="OUTPUT", default="plots.root", help="name of output file [plots.root]")
+        parser_ana.add_argument("-f", "--folder", dest="FOLDER", default="", help="Output folder if different from input ones")
+        parser_ana.add_argument("-e", "--events", dest="EVENTS", default=-1, help="Number of events to be processed [all]")
+        parser_ana.add_argument("--debug",  dest="DEBUG", default=False, action='store_const', const=True, help="Generate debug output [False]")
+        parser_ana.add_argument("--sourcepath", dest="SOURCEPATH", default="", help="Path to the source of NtupleAnalyzer code")
+
+        parser_rwgt = subparser.add_parser('reweight', help='reweight help (add this mode for more specific help)')
+        parser_rwgt.add_argument("-m", "--multip", dest="MULTIP", required=True, help="Multiplicity of process to reweight: 1, 2, 3")
+        parser_rwgt.add_argument("-s", "--suffix", dest="SUFFIX", default="_new", help="Suffix for output file name [_new]")
+        parser_rwgt.add_argument("-o", "--output", dest="OUTPUT", default="", help="Output file name. By default the input file name is used with suffix '_new'")
+        parser_rwgt.add_argument("-f", "--folder", dest="FOLDER", default="", help="Output folder if different from input ones")
+        parser_rwgt.add_argument("-e", "--events", dest="EVENTS", default=-1, help="Number of events to be processed [all]")
+        parser_rwgt.add_argument("--debug",  dest="DEBUG", default=False, action='store_const', const=True, help="Generate debug output [False]")
+        parser_rwgt.add_argument("--sourcepath", dest="SOURCEPATH", default="", help="Path to the source of NtupleAnalyzer code")
+        parser_rwgt.add_argument("--noolp",  dest="NOOLP", default=False, action='store_const', const=True, help="Run without link to OLP library [False]")
+
+        parser.add_argument('INPUTFILES', nargs='+', metavar='Ntuple.root', help='One or more Root NTuple input files. When more than one input file is given, the files are processed one after the other.')
+        #parser.add_argument("-s","--show", action='store_true', dest="SHOW", default=False, help="show results in default web browser [NO]")
+        #parser.add_argument("-w","--overwrite", action='store_true', dest="OVERWRITE", default=False, help="overwrite existing plots [NO]")
+        #parser.add_argument("-n", "-j", "--num-threads",action="store", dest='NUM_THREADS', type=int, default=numcores, help="max number of threads to be used [%s]" % numcores)
+        #parser.add_argument("-a", "--alpha", action="store", dest='ALPHA_BAND', type=float, default=0.2, help="transparency of error bands [0.2]")
+        #parser.add_argument("-v", "--verbose", action="store_const", const=logging.DEBUG, dest="LOGLEVEL", default=logging.INFO, help="print debug (very verbose) messages [NO]")
+        #parser.add_argument("-q", "--quiet", action="store_const", const=logging.WARNING, dest="LOGLEVEL", default=logging.INFO, help="be very quiet [NO]")
+        #parser.add_argument("-p", "--prefix", dest="PREFIX", default="xxx", help="prefix to histogram file names")
+    
+        args            = parser.parse_args()
+        self.mode       = args.MODE
+        self.filenames  = args.INPUTFILES
+        self.multip     = int(args.MULTIP)
+        self.suffix     = args.SUFFIX
+        self.outfile    = args.OUTPUT
+        self.outfolder  = args.FOLDER
+        self.events     = args.EVENTS
+        self.debug      = args.DEBUG
+        self.sourcepath = args.SOURCEPATH
+
+        if self.mode == 'analysis':
+            self.noolp = True
+        else:
+            self.noolp = args.NOOLP
+
+        if self.outfolder:
+            if not os.path.isdir(self.outfolder):
+                print "Output folder does not exist, creating it.."
+                os.makedirs(self.outfolder)
+
+        try:
+            value = int(self.multip)
+        except ValueError:
+            print "Multiplicity must be an integer: 1,2 or 3"
+            sys.exit(2)
+  
+        self.filenames.sort()
+
+
+    def print_parameters(self):
+
+        print "------------------------------"
+        print "--    SETUP PARAMETERS      --"
+        print "------------------------------"
+        print ""
+        print (" MODE: {0} for Higgs + {1} jet(s)".format(str(self.mode), str(self.multip)))
+        print ""
+        print " INPUT FILES:"
+        for i in self.filenames:
+            print " -", i
+        print ""
+        print " OUTPUT:"
+        if not self.outfolder:
+            print "   folder: not specified, use same as input-file folder"
+        else:
+            print "   folder: ", self.outfolder
+        if not self.outfile:
+            print "   suffix: ", self.suffix
+        else:
+            print "   file name: ", self.outfile
+        print ""
+        if self.events < 0:
+            print " EVENTS: all"
+        else:
+            print " EVENTS: ", self.events
+        print ""
+
+
+if __name__ == '__main__':
+
+    input_param = Parameters()
+    input_param.print_parameters()
+
+    main(input_param)
+
+
+# Example of lauch command for reweighting:
+#
+#     ./NtupleAnalyzer reweight -m 2 --debug --events=10 --output=test.root EDNTuplesFiles/H2.0j_amegic_GGFHT_B_6500_pt25.0_eta4.5_CT10nlo_r100_100.root
+#
+#
