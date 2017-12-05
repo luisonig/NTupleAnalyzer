@@ -19,6 +19,12 @@ extern "C" void full_OLP_EvalSubProcess(int, double*, double, double*, double*);
 extern "C" void full_OLP_Option(const char * assignment, int* success);
 extern "C" void full_OLP_PrintParameter(const char * filename);
 
+//extern "C" void full_OLP_Start_qp(const char *fname, int *ierr);
+//extern "C" void full_OLP_EvalSubProcess_qp(int, double*, double, double*, double*);
+//extern "C" void full_OLP_Option_qp(const char * assignment, int* success);
+//extern "C" void full_OLP_PrintParameter_qp(const char * filename);
+
+
 // --------------------------------------------------------------------------- //
 // Selector
 // --------------------------------------------------------------------------- //
