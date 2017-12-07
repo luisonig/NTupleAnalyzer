@@ -140,16 +140,15 @@ void TSelectorAnalyzer::TestAnalysis()
 
   //PrintEvent(particles);
   
-  //returning Higgs pT
-  pth.push_back(particles[2].pt());
   
   //now passing final state partons to fastjet
   PseudoJetVector jetinput;
-  for (Int_t i=3; i<get_nparticle(); i++){
-
+  for (Int_t i=1; i<get_nparticle(); i++){
+    
     fastjet::PseudoJet vec = fastjet::PseudoJet(get_px(i), get_py(i), get_pz(i), get_E(i));
     jetinput.push_back(vec);
   }  
+
 
   double R(0.4);
   fastjet::JetDefinition jet_definition;
@@ -159,7 +158,11 @@ void TSelectorAnalyzer::TestAnalysis()
   PseudoJetVector unsortedjets = cs.inclusive_jets(jet_ptmin);
   PseudoJetVector jets = fastjet::sorted_by_pt(unsortedjets);
 
+  
+
   if (jets.size() >=2){  
+   //returning Higgs pT
+   pth.push_back(particles[2].pt());      
    //returning leading and subleading jet pT
    ptj1.push_back(jets[0].pt());
    ptj2.push_back(jets[1].pt());

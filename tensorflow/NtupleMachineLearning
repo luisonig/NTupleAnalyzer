@@ -90,21 +90,32 @@ def main(param):
 
     proc_type=[]
     pthlist=[]
+    ptj1list=[]
+    ptj2list=[]
+    mjjlist=[]
+    dphijjlist=[]
+    observable_list=[]
        
     #// Define chain and add file list:
     chain = ROOT.TChain("t3")
     chain.Add(param.GGFFILE_TRAIN)
     chain.GetFile()  # force opening of the first file
-    chain.SetMaxEntryLoop(5)
-    chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)              
+    chain.SetMaxEntryLoop(2**60)
+    if param.events < 0:
+      chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0) 
+    else:
+      chain.Process(tr_reader, "", int(param.events), 0)   
     ggf_size=len(AnalyzerSelector.pth)
 
         
     chain = ROOT.TChain("t3")
     chain.Add(param.VBFFILE_TRAIN)
     chain.GetFile()  # force opening of the first file
-    chain.SetMaxEntryLoop(5)
-    chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)              
+    chain.SetMaxEntryLoop(2**60)
+    if param.events < 0:
+      chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0) 
+    else:
+      chain.Process(tr_reader, "", int(param.events), 0)   
     tot_size=len(AnalyzerSelector.pth)
 
 
@@ -118,12 +129,17 @@ def main(param):
         
     for i in range(tot_size):
         pthlist.append([AnalyzerSelector.pth[i]])
+        ptj1list.append([AnalyzerSelector.ptj1[i]])
+        ptj2list.append([AnalyzerSelector.ptj2[i]])
+        mjjlist.append([AnalyzerSelector.mjj[i]])
+        dphijjlist.append([AnalyzerSelector.dphijj[i]])
+        observable_list.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
+                                AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i]])
+        
                
             
-
-    #print pthlist
-    x=tf.placeholder(tf.float32, [None, 1])
-    W = tf.Variable(tf.zeros([1,2]))
+    x=tf.placeholder(tf.float32, [None, 5])
+    W = tf.Variable(tf.zeros([5,2]))
     b = tf.Variable(tf.zeros([2]))
     y = tf.nn.softmax(tf.matmul(x,W) +b)
         
@@ -138,7 +154,7 @@ def main(param):
     #pthlist1=[pthlist,[1]]
     #print pthlist
     #print proc_type
-    sess.run(train_step, feed_dict={x: pthlist, y_: proc_type})
+    sess.run(train_step, feed_dict={x: observable_list, y_: proc_type})
         
     correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -148,23 +164,41 @@ def main(param):
 
     print"Evaluation"
     
+    #// Define reader selector:
+    eval_reader = ROOT.TSelectorReader()
+
+    #// Analysis Selectors:
+    AnalyzerSelector = ROOT.TSelectorAnalyzer()
+    eval_reader.addSelector(AnalyzerSelector)    
+    
     proc_type=[]
     pthlist=[]
+    ptj1list=[]
+    ptj2list=[]
+    mjjlist=[]
+    dphijjlist=[]  
+    observable_list=[]
        
     #// Define chain and add file list:
     chain = ROOT.TChain("t3")
     chain.Add(param.GGFFILE_EVAL)
     chain.GetFile()  # force opening of the first file
-    chain.SetMaxEntryLoop(5)
-    chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)              
+    chain.SetMaxEntryLoop(2**60)
+    if param.events < 0:
+      chain.Process(eval_reader, "", chain.GetMaxEntryLoop(), 0) 
+    else:
+      chain.Process(eval_reader, "", int(param.events), 0)   
     ggf_size=len(AnalyzerSelector.pth)
 
         
     chain = ROOT.TChain("t3")
     chain.Add(param.VBFFILE_EVAL)
     chain.GetFile()  # force opening of the first file
-    chain.SetMaxEntryLoop(5)
-    chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)              
+    chain.SetMaxEntryLoop(2**60)
+    if param.events < 0:
+      chain.Process(eval_reader, "", chain.GetMaxEntryLoop(), 0) 
+    else:
+      chain.Process(eval_reader, "", int(param.events), 0)   
     tot_size=len(AnalyzerSelector.pth)
 
 
@@ -177,12 +211,19 @@ def main(param):
             
         
     for i in range(tot_size):
-        pthlist.append([AnalyzerSelector.pth[i]])    
+        pthlist.append([AnalyzerSelector.pth[i]])  
+        ptj1list.append([AnalyzerSelector.ptj1[i]])
+        ptj2list.append([AnalyzerSelector.ptj2[i]])
+        mjjlist.append([AnalyzerSelector.mjj[i]])
+        dphijjlist.append([AnalyzerSelector.dphijj[i]])
+        observable_list.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
+                                AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i]])
+        
 
-    
+    print "tot_size", tot_size
     print ""
     print "Accuracy on test data:"
-    print(sess.run(accuracy, feed_dict={x: pthlist, y_: proc_type}))
+    print(sess.run(accuracy, feed_dict={x: observable_list, y_: proc_type}))
     print ""
 
 
