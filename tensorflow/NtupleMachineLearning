@@ -76,76 +76,122 @@ def main(param):
     #// Perform trainigs:
     # *****************************************************
 
-    if param.mode == 'training':
+    #if param.mode == 'training':
         
-        print"Training"
+    print"Training"
 
-        #// Define reader selector:
-        tr_reader = ROOT.TSelectorReader()
+    #// Define reader selector:
+    tr_reader = ROOT.TSelectorReader()
 
-        #// Analysis Selectors:
-        AnalyzerSelector = ROOT.TSelectorAnalyzer()
-        tr_reader.addSelector(AnalyzerSelector)
+    #// Analysis Selectors:
+    AnalyzerSelector = ROOT.TSelectorAnalyzer()
+    tr_reader.addSelector(AnalyzerSelector)
 
 
-        proc_type=[]
-        pthlist=[]
+    proc_type=[]
+    pthlist=[]
+       
+    #// Define chain and add file list:
+    chain = ROOT.TChain("t3")
+    chain.Add(param.GGFFILE_TRAIN)
+    chain.GetFile()  # force opening of the first file
+    chain.SetMaxEntryLoop(5)
+    chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)              
+    ggf_size=len(AnalyzerSelector.pth)
+
         
-        #// Define chain and add file list:
-        chain = ROOT.TChain("t3")
-        chain.Add(param.GGFFILE)
-        chain.GetFile()  # force opening of the first file
-        chain.SetMaxEntryLoop(5)
-        chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)              
-        ggf_size=len(AnalyzerSelector.pth)
+    chain = ROOT.TChain("t3")
+    chain.Add(param.VBFFILE_TRAIN)
+    chain.GetFile()  # force opening of the first file
+    chain.SetMaxEntryLoop(5)
+    chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)              
+    tot_size=len(AnalyzerSelector.pth)
 
+
+    vbf_size=tot_size-ggf_size
         
-        chain = ROOT.TChain("t3")
-        chain.Add(param.VBFFILE)
-        chain.GetFile()  # force opening of the first file
-        chain.SetMaxEntryLoop(5)
-        chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)              
-        tot_size=len(AnalyzerSelector.pth)
-
-
-        vbf_size=tot_size-ggf_size
-        
-        for i in range(ggf_size):
-            proc_type.append(0.)
-        for i in range(vbf_size):
-            proc_type.append(1.)
+    for i in range(ggf_size):
+        proc_type.append([1.,0.])
+    for i in range(vbf_size):
+        proc_type.append([0.,1.])
             
         
-        for i in range(tot_size):
-            pthlist.append(AnalyzerSelector.pth[i])
+    for i in range(tot_size):
+        pthlist.append([AnalyzerSelector.pth[i]])
                
             
 
-        #print pthlist
-        x=tf.placeholder(tf.float32, [None, 1])
-        W = tf.Variable(tf.zeros([1,1]))
-        b = tf.Variable(tf.zeros([1]))
-        y = tf.nn.softmax(tf.matmul(x,W) +b)
+    #print pthlist
+    x=tf.placeholder(tf.float32, [None, 1])
+    W = tf.Variable(tf.zeros([1,2]))
+    b = tf.Variable(tf.zeros([2]))
+    y = tf.nn.softmax(tf.matmul(x,W) +b)
         
-        y_ = tf.placeholder(tf.float32, [None,2])
-        cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_*tf.log(y), reduction_indices=[1]))
-        train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
-        sess= tf.InteractiveSession()
+    y_ = tf.placeholder(tf.float32, [None,2])
+    cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_*tf.log(y), reduction_indices=[1]))
+    train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+    sess= tf.InteractiveSession()
         
-        tf.global_variables_initializer().run()
+    tf.global_variables_initializer().run()
         
-        #for _ in range(100):
-        sess.run(train_step, feed_dict={x: pthlist,1, y_: proc_type})
+    #for _ in range(100):
+    #pthlist1=[pthlist,[1]]
+    #print pthlist
+    #print proc_type
+    sess.run(train_step, feed_dict={x: pthlist, y_: proc_type})
         
+    correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        
+    #print "correct_prediction", correct_prediction
+        
+
+    print"Evaluation"
+    
+    proc_type=[]
+    pthlist=[]
+       
+    #// Define chain and add file list:
+    chain = ROOT.TChain("t3")
+    chain.Add(param.GGFFILE_EVAL)
+    chain.GetFile()  # force opening of the first file
+    chain.SetMaxEntryLoop(5)
+    chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)              
+    ggf_size=len(AnalyzerSelector.pth)
+
+        
+    chain = ROOT.TChain("t3")
+    chain.Add(param.VBFFILE_EVAL)
+    chain.GetFile()  # force opening of the first file
+    chain.SetMaxEntryLoop(5)
+    chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)              
+    tot_size=len(AnalyzerSelector.pth)
+
+
+    vbf_size=tot_size-ggf_size
+        
+    for i in range(ggf_size):
+        proc_type.append([1.,0.])
+    for i in range(vbf_size):
+        proc_type.append([0.,1.])
+            
+        
+    for i in range(tot_size):
+        pthlist.append([AnalyzerSelector.pth[i]])    
+
+    
+    print ""
+    print "Accuracy on test data:"
+    print(sess.run(accuracy, feed_dict={x: pthlist, y_: proc_type}))
+    print ""
 
 
     # *****************************************************
     #// Perform evaluation
     # *****************************************************
 
-    if param.mode == 'evaluation':
-        
-        print "Not there yet"
+#    if param.mode == 'evaluation':
+                
 
         ##// If need to reweight we need a chain for every file:
 
@@ -215,14 +261,16 @@ class Parameters:
         ## Argument parser
 
         parser = argparse.ArgumentParser(description='NLO NTuples machine learning tool.') #,formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        subparser = parser.add_subparsers(dest='MODE', help='Program running mode: training, evaluation')
+        #subparser = parser.add_subparsers(dest='MODE', help='Program running mode: training, evaluation')
         
-        parser_train = subparser.add_parser('training', help='training help (add this mode for more specific help)')
-        parser_train.add_argument("-m", "--multip", dest="MULTIP", required=True, help="Multiplicity of process to reweight: 2, 3")        
-        parser_train.add_argument("-e", "--events", dest="EVENTS", default=-1, help="Number of events to be processed [all]")        
-        parser_train.add_argument("--debug",  dest="DEBUG", default=False, action='store_const', const=True, help="Generate debug output [False]")
-        parser_train.add_argument("-ggf", "--ggf", dest="GGFFILE", required=True, help="Root Ntuple for GGF")
-        parser_train.add_argument("-vbf", "--vbf", dest="VBFFILE", required=True, help="Root Ntuple for VBF")                
+        #parser_train = subparser.add_parser('training', help='training help (add this mode for more specific help)')
+        parser.add_argument("-m", "--multip", dest="MULTIP", required=True, help="Multiplicity of process to reweight: 2, 3")        
+        parser.add_argument("-e", "--events", dest="EVENTS", default=-1, help="Number of events to be processed [all]")        
+        parser.add_argument("--debug",  dest="DEBUG", default=False, action='store_const', const=True, help="Generate debug output [False]")
+        parser.add_argument("-ggf_train", "--ggf_train", dest="GGFFILE_TRAIN", required=True, help="Root Ntuple for training GGF")
+        parser.add_argument("-vbf_train", "--vbf_train", dest="VBFFILE_TRAIN", required=True, help="Root Ntuple for training VBF")                
+        parser.add_argument("-ggf_eval", "--ggf_eval", dest="GGFFILE_EVAL", required=True, help="Root Ntuple for evaluating GGF")
+        parser.add_argument("-vbf_eval", "--vbf_eval", dest="VBFFILE_EVAL", required=True, help="Root Ntuple for evaluating VBF")        
 
         #parser_ana = subparser.add_parser('analysis', help='analysis help (add this mode for more specific help)')
         #parser_ana.add_argument("-m", "--multip", dest="MULTIP", required=True, help="Multiplicity of process to reweight: 1, 2, 3")
@@ -253,7 +301,7 @@ class Parameters:
         #parser.add_argument("-p", "--prefix", dest="PREFIX", default="xxx", help="prefix to histogram file names")
     
         args            = parser.parse_args()
-        self.mode       = args.MODE
+        #self.mode       = args.MODE
         #self.filenames  = args.INPUTFILES
         self.multip     = int(args.MULTIP)
         #self.suffix     = args.SUFFIX
@@ -262,8 +310,10 @@ class Parameters:
         self.events     = args.EVENTS
         self.debug      = args.DEBUG
         #self.sourcepath = args.SOURCEPATH
-        self.GGFFILE    = args.GGFFILE
-        self.VBFFILE    = args.VBFFILE
+        self.GGFFILE_TRAIN    = args.GGFFILE_TRAIN
+        self.VBFFILE_TRAIN    = args.VBFFILE_TRAIN
+        self.GGFFILE_EVAL    = args.GGFFILE_EVAL
+        self.VBFFILE_EVAL    = args.VBFFILE_EVAL        
 
         #if self.outfolder:
             #if not os.path.isdir(self.outfolder):
@@ -285,7 +335,7 @@ class Parameters:
         print "--    SETUP PARAMETERS      --"
         print "------------------------------"
         print ""
-        print (" MODE: {0} for Higgs + {1} jet(s)".format(str(self.mode), str(self.multip)))
+        print (" MODE: Higgs + {0} jet(s)".format( str(self.multip)))
         print ""
         #print " INPUT FILES:"
         #for i in self.filenames:
