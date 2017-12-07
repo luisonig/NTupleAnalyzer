@@ -94,6 +94,8 @@ def main(param):
     ptj2list=[]
     mjjlist=[]
     dphijjlist=[]
+    yj1list=[]
+    yj2list=[]
     observable_list=[]
        
     #// Define chain and add file list:
@@ -133,13 +135,16 @@ def main(param):
         ptj2list.append([AnalyzerSelector.ptj2[i]])
         mjjlist.append([AnalyzerSelector.mjj[i]])
         dphijjlist.append([AnalyzerSelector.dphijj[i]])
+        yj1list.append([AnalyzerSelector.yj1[i]])
+        yj2list.append([AnalyzerSelector.yj2[i]])
         observable_list.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
-                                AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i]])
+                                AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
+                                AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i]])
         
                
             
-    x=tf.placeholder(tf.float32, [None, 5])
-    W = tf.Variable(tf.zeros([5,2]))
+    x=tf.placeholder(tf.float32, [None, 7])
+    W = tf.Variable(tf.zeros([7,2]))
     b = tf.Variable(tf.zeros([2]))
     y = tf.nn.softmax(tf.matmul(x,W) +b)
         
@@ -176,7 +181,9 @@ def main(param):
     ptj1list=[]
     ptj2list=[]
     mjjlist=[]
-    dphijjlist=[]  
+    dphijjlist=[]
+    yj1list=[]
+    yj2list=[]    
     observable_list=[]
        
     #// Define chain and add file list:
@@ -216,8 +223,11 @@ def main(param):
         ptj2list.append([AnalyzerSelector.ptj2[i]])
         mjjlist.append([AnalyzerSelector.mjj[i]])
         dphijjlist.append([AnalyzerSelector.dphijj[i]])
+        yj1list.append([AnalyzerSelector.yj1[i]])
+        yj2list.append([AnalyzerSelector.yj2[i]])        
         observable_list.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
-                                AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i]])
+                                AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
+                                AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i]])
         
 
     print "tot_size", tot_size
