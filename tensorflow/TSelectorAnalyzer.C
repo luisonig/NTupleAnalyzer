@@ -160,14 +160,16 @@ void TSelectorAnalyzer::TestAnalysis()
 
   
 
-  if (jets.size() >=2 and m_inv(jets[0],jets[1])>400.0){  
+  if (jets.size() >=2 and m_inv(jets[0],jets[1])>0.0){  
    //returning Higgs pT
    pth.push_back(particles[2].pt());      
    //returning leading and subleading jet pT
    ptj1.push_back(jets[0].pt());
    ptj2.push_back(jets[1].pt());
+   
    yj1.push_back(jets[0].rap());
    yj2.push_back(jets[1].rap());
+   yjj.push_back(abs(jets[0].rap()-jets[1].rap()));
   
    //returning invariant jet-jet mass
    mjj.push_back(m_inv(jets[0],jets[1]));  

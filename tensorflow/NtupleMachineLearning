@@ -117,6 +117,7 @@ def main(param):
     dphijjlist_train=[]
     yj1list_train=[]
     yj2list_train=[]
+    yjjlist_train=[]
     observable_list_train=[]
     train_data=[]
        
@@ -160,9 +161,10 @@ def main(param):
         dphijjlist_train.append([AnalyzerSelector.dphijj[i]])
         yj1list_train.append([AnalyzerSelector.yj1[i]])
         yj2list_train.append([AnalyzerSelector.yj2[i]])
+        yjjlist_train.append([AnalyzerSelector.yjj[i]])
         observable_list_train.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
                                 AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
-                                AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i]])
+                                AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i]])
         
         
         
@@ -230,7 +232,8 @@ def main(param):
     mjjlist_test=[]
     dphijjlist_test=[]
     yj1list_test=[]
-    yj2list_test=[]    
+    yj2list_test=[]
+    yjjlist_test=[]
     observable_list_test=[]
        
     #// Define chain and add file list:
@@ -271,10 +274,11 @@ def main(param):
         mjjlist_test.append([AnalyzerSelector.mjj[i]])
         dphijjlist_test.append([AnalyzerSelector.dphijj[i]])
         yj1list_test.append([AnalyzerSelector.yj1[i]])
-        yj2list_test.append([AnalyzerSelector.yj2[i]])        
+        yj2list_test.append([AnalyzerSelector.yj2[i]]) 
+        yjjlist_test.append([AnalyzerSelector.yjj[i]])
         observable_list_test.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
                                 AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
-                                AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i]])
+                                AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i]])
         
 
     #print "tot_size", tot_size
@@ -308,7 +312,7 @@ def train(gp,param, x_train, y_train, x_test, y_test):
 
   ## Input placeholders
   with tf.name_scope('input'):
-    x = tf.placeholder(tf.float32, [None, 7], name='x-input')
+    x = tf.placeholder(tf.float32, [None, 8], name='x-input')
     y_ = tf.placeholder(tf.float32, [None, 2], name='y-input')
 
   ##with tf.name_scope('input_reshape'):
@@ -362,7 +366,7 @@ def train(gp,param, x_train, y_train, x_test, y_test):
       tf.summary.histogram('activations', activations)
       return activations
 
-  hidden1 = nn_layer(x, 7, 500, 'layer1')
+  hidden1 = nn_layer(x, 8, 500, 'layer1')
 
   with tf.name_scope('dropout'):
     keep_prob = tf.placeholder(tf.float32)
@@ -488,7 +492,7 @@ class Parameters:
         parser.add_argument('--learning_rate', type=float, dest="learning_rate", default=0.001,help='Initial learning rate')
         parser.add_argument('--log_dir', type=str, dest='log_dir', default='/data/greiner/NTupleAnalyzer/tensorflow',help='Summaries log directory')    
         parser.add_argument('--dropout', type=float, dest="dropout", default=0.9,help='Keep probability for training dropout.') 
-        parser.add_argument('--max_steps', type=int, dest="max_steps", default=1000,
+        parser.add_argument('--max_steps', type=int, dest="max_steps", default=500,
                       help='Number of steps to run trainer.')
         
         #parser_ana = subparser.add_parser('analysis', help='analysis help (add this mode for more specific help)')

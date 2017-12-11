@@ -169,7 +169,8 @@ class TSelectorMain
   vector<Double_t> ptj2;  
   vector<Double_t> dphijj;
   vector<Double_t> yj1;    
-  vector<Double_t> yj2;  
+  vector<Double_t> yj2;
+  vector<Double_t> yjj;    
 
   Double_t m_inv(fastjet::PseudoJet p1, fastjet::PseudoJet p2){
      return sqrt( pow(p1.E()+p2.E(),2)-pow(p1.px()+p2.px(),2)-pow(p1.py()+p2.py(),2)-pow(p1.pz()+p2.pz(),2) );
