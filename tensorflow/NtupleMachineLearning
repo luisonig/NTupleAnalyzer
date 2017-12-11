@@ -166,6 +166,11 @@ def main(param):
         
         
         
+    #Shuffling the training data
+    perm = np.arange(gp.num_examples())
+    np.random.shuffle(perm)
+    observable_list_train=np.array(observable_list_train)[perm]
+    proc_type_train=np.array(proc_type_train)[perm]
         
         
                
