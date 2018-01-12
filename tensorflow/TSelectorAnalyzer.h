@@ -32,6 +32,8 @@ class TSelectorAnalyzer : public TSelectorMain
   typedef std::vector<fastjet::PseudoJet> PseudoJetVector;
   fastjet::PseudoJet get_vec(int i) const;
 
+  unsigned int multip;  // final state multiplicity
+  
   void TestAnalysis();
   void PrintEvent(const PseudoJetVector particles);
 

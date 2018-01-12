@@ -246,17 +246,14 @@ def main(param):
     #if param.mode == 'training':
         
     print"Training"
-    gp=Globalparams()    
-    
-
-
-
+    gp=Globalparams()
 
     #// Define reader selector:
     tr_reader = ROOT.TSelectorReader()
 
     #// Analysis Selectors:
     AnalyzerSelector = ROOT.TSelectorAnalyzer()
+    AnalyzerSelector.multip = param.multip
     tr_reader.addSelector(AnalyzerSelector)
 
 
@@ -270,6 +267,7 @@ def main(param):
     yj2list_train=[]
     yjjlist_train=[]
     zstarlist_train=[]
+    zstarj3list_train=[]
     Rptjetlist_train=[]
     observable_list_train=[]
     weights_train=[]
@@ -319,11 +317,12 @@ def main(param):
         yjjlist_train.append([AnalyzerSelector.yjj[i]])
         zstarlist_train.append([AnalyzerSelector.zstar[i]])
         Rptjetlist_train.append([AnalyzerSelector.Rptjet[i]])
+        zstarj3list_train.append([AnalyzerSelector.zstarj3[i]])
         weights_train.append(AnalyzerSelector.weightlist[i])
         observable_list_train.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
                                 AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
                                 AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
-                                AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i]])
+                                AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i]])
         
         
     
@@ -384,6 +383,7 @@ def main(param):
 
     #// Analysis Selectors:
     AnalyzerSelector = ROOT.TSelectorAnalyzer()
+    AnalyzerSelector.multip = param.multip
     eval_reader.addSelector(AnalyzerSelector)    
     
     proc_type_test=[]
@@ -396,6 +396,7 @@ def main(param):
     yj2list_test=[]
     yjjlist_test=[]
     zstarlist_test=[]
+    zstarj3list_test=[]
     Rptjetlist_test=[]
     weights_test=[]
     observable_list_test=[]
@@ -443,19 +444,14 @@ def main(param):
         yj2list_test.append(AnalyzerSelector.yj2[i]) 
         yjjlist_test.append(AnalyzerSelector.yjj[i])
         zstarlist_test.append(AnalyzerSelector.zstar[i])
+        zstarj3list_test.append(AnalyzerSelector.zstarj3[i])
         Rptjetlist_test.append(AnalyzerSelector.Rptjet[i])
         weights_test.append(AnalyzerSelector.weightlist[i])
         observable_list_test.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
                                 AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
                                 AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
-                                AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i]])
+                                AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i]])
         
-
-   
-    
-    
-    
-
 
     y_final=train(gp,param,observable_list_train, proc_type_train, observable_list_test, proc_type_test)
     y_rewrite=[]
@@ -495,7 +491,7 @@ def train(gp,param, x_train, y_train, x_test, y_test):
 
   ## Input placeholders
   with tf.name_scope('input'):
-    x = tf.placeholder(tf.float32, [None, 10], name='x-input')
+    x = tf.placeholder(tf.float32, [None, 11], name='x-input')
     y_ = tf.placeholder(tf.float32, [None, 2], name='y-input')
 
   ##with tf.name_scope('input_reshape'):
@@ -549,7 +545,7 @@ def train(gp,param, x_train, y_train, x_test, y_test):
       tf.summary.histogram('activations', activations)
       return activations
 
-  hidden1 = nn_layer(x, 10, 200, 'layer1')
+  hidden1 = nn_layer(x, 11, 200, 'layer1')
   
   hidden2 = nn_layer(hidden1, 200, 50, 'layer2')
 

@@ -22,8 +22,9 @@
 // --------------------------------------------------------------------------- //
 
 TSelectorAnalyzer::TSelectorAnalyzer()
-//  : event_prev_id(-1), event_groups(0),
-//    event_trials(1), new_event(1)
+  : multip(0)
+    //  , event_groups(0),
+    //    event_trials(1), new_event(1)
 {
 
   // extra alphas powers settings
@@ -158,9 +159,9 @@ void TSelectorAnalyzer::TestAnalysis()
   PseudoJetVector unsortedjets = cs.inclusive_jets(jet_ptmin);
   PseudoJetVector jets = fastjet::sorted_by_pt(unsortedjets);
 
-  
+  //std::cout<<"----> "<<multip<<std::endl;
 
-  if (jets.size() >=3 && m_inv(jets[0],jets[1])>400.0 && abs(jets[0].rap()-jets[1].rap())>2.8){  
+  if (jets.size() >= multip && m_inv(jets[0],jets[1])>400.0 && abs(jets[0].rap()-jets[1].rap())>2.8){
    //returning Higgs pT
    pth.push_back(particles[2].pt());      
    //returning leading and subleading jet pT
@@ -173,6 +174,11 @@ void TSelectorAnalyzer::TestAnalysis()
    yj2.push_back(jets[1].rap());
    yjj.push_back(abs(jets[0].rap()-jets[1].rap()));
    zstar.push_back(abs(particles[2].rap()-(jets[0].rap()+jets[1].rap())/2.0)/abs(jets[0].rap()-jets[1].rap()));
+
+   if (multip == 3){
+     zstarj3.push_back((jets[2].rap()-(jets[0].rap()+jets[1].rap())/2.0)/abs(jets[0].rap()-jets[1].rap()));
+   }
+
    Rptjet.push_back(j1j2[0].pt()/(jets[0].pt()+jets[1].pt()));
   
    //returning invariant jet-jet mass

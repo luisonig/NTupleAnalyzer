@@ -172,6 +172,7 @@ class TSelectorMain
   vector<Double_t> yj2;
   vector<Double_t> yjj;    
   vector<Double_t> zstar;
+  vector<Double_t> zstarj3;
   vector<Double_t> Rptjet;    
   vector<Double_t> weightlist;  
 
