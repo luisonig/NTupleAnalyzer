@@ -224,8 +224,27 @@ def makeplot(title, x, weights, ggf_size, y):
     
     plt.show()        
 
+def make2dplot(observables,train,ggf_size,tot_size):
+    
+    
+    data=np.array(train)
 
+    for j in range(0,len(observables)):
+        plt.figure(j+1,figsize=(18,8))
+        k=0
+        for i in range(0,len(observables)):
+            if i == j:
+                continue
+            k+=1
+            plt.subplot(250+k)
+            plt.plot(data[0:ggf_size,j], data[0:ggf_size,i], 'ro', data[ggf_size:tot_size,j], data[ggf_size:tot_size,i], 'bo')
+            plt.xlabel(observables[j])
+            plt.ylabel(observables[i])
+            plt.title('Plot: '+observables[j]+' vs. '+observables[i])
+        plt.tight_layout()
 
+    plt.show()
+        
 def main(param):
 
     # Store starting time:
@@ -269,6 +288,7 @@ def main(param):
     zstarlist_train=[]
     zstarj3list_train=[]
     Rptjetlist_train=[]
+    
     observable_list_train=[]
     weights_train=[]
        
@@ -299,7 +319,7 @@ def main(param):
     vbf_size=tot_size-ggf_size
     print "ggf_size train", ggf_size
     print "vbf_size train", vbf_size
-        
+    
     for i in range(ggf_size):
         proc_type_train.append([1.,0.])
     for i in range(vbf_size):
@@ -317,17 +337,29 @@ def main(param):
         yjjlist_train.append([AnalyzerSelector.yjj[i]])
         zstarlist_train.append([AnalyzerSelector.zstar[i]])
         Rptjetlist_train.append([AnalyzerSelector.Rptjet[i]])
-        zstarj3list_train.append([AnalyzerSelector.zstarj3[i]])
+
+        if param.multip == 3:
+            zstarj3list_train.append([AnalyzerSelector.zstarj3[i]])
+            
         weights_train.append(AnalyzerSelector.weightlist[i])
-        observable_list_train.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
-                                AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
-                                AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
-                                AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i]])
+
+        if param.multip == 2:
+            observable_list_train.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
+                                          AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
+                                          AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
+                                          AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i]])
+
+        if param.multip == 3:
+            observable_list_train.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
+                                          AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
+                                          AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
+                                          AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i]])
         
-        
+    make2dplot(["pth","ptj1","ptj2","mjj","dphijj","yj1","yj2","yjj","zstar","Rptjet"],observable_list_train,ggf_size,tot_size)
     
     #makeplot("pTH_ggf",pthlist_train[0:ggf_size],weights_train[0:ggf_size])
-    #sys.exit()
+    sys.exit()
+
     #Shuffling the training data
     perm = np.arange(gp.num_examples())
     np.random.shuffle(perm)
@@ -444,14 +476,24 @@ def main(param):
         yj2list_test.append(AnalyzerSelector.yj2[i]) 
         yjjlist_test.append(AnalyzerSelector.yjj[i])
         zstarlist_test.append(AnalyzerSelector.zstar[i])
-        zstarj3list_test.append(AnalyzerSelector.zstarj3[i])
+
+        if param.multip == 3:
+            zstarj3list_test.append(AnalyzerSelector.zstarj3[i])
         Rptjetlist_test.append(AnalyzerSelector.Rptjet[i])
         weights_test.append(AnalyzerSelector.weightlist[i])
-        observable_list_test.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
-                                AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
-                                AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
-                                AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i]])
-        
+
+        if param.multip == 2:
+            observable_list_test.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
+                                         AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
+                                         AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
+                                         AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i]])
+
+        if param.multip == 3:
+            observable_list_test.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
+                                         AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
+                                         AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
+                                         AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i]])
+            
 
     y_final=train(gp,param,observable_list_train, proc_type_train, observable_list_test, proc_type_test)
     y_rewrite=[]
@@ -483,7 +525,7 @@ def train(gp,param, x_train, y_train, x_test, y_test):
 
   print "in train"
 
-                                  
+  indim = len(x_train[0])
 
   #sess = tf.InteractiveSession(config=tf.ConfigProto(device_count={"CPU":8}))
   sess = tf.InteractiveSession(config=tf.ConfigProto(inter_op_parallelism_threads=8))  
@@ -491,7 +533,7 @@ def train(gp,param, x_train, y_train, x_test, y_test):
 
   ## Input placeholders
   with tf.name_scope('input'):
-    x = tf.placeholder(tf.float32, [None, 11], name='x-input')
+    x = tf.placeholder(tf.float32, [None, indim], name='x-input')
     y_ = tf.placeholder(tf.float32, [None, 2], name='y-input')
 
   ##with tf.name_scope('input_reshape'):
@@ -545,7 +587,7 @@ def train(gp,param, x_train, y_train, x_test, y_test):
       tf.summary.histogram('activations', activations)
       return activations
 
-  hidden1 = nn_layer(x, 11, 200, 'layer1')
+  hidden1 = nn_layer(x, indim, 200, 'layer1')
   
   hidden2 = nn_layer(hidden1, 200, 50, 'layer2')
 
