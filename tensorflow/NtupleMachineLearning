@@ -237,7 +237,7 @@ def make2dplot(observables,train,ggf_size,tot_size):
                 continue
             k+=1
             plt.subplot(250+k)
-            plt.plot(data[0:ggf_size,j], data[0:ggf_size,i], 'ro', data[ggf_size:tot_size,j], data[ggf_size:tot_size,i], 'bo')
+            plt.plot(data[0:ggf_size,j], data[0:ggf_size,i], 'r.', data[ggf_size:tot_size,j], data[ggf_size:tot_size,i], 'b.')
             plt.xlabel(observables[j])
             plt.ylabel(observables[i])
             plt.title('Plot: '+observables[j]+' vs. '+observables[i])
