@@ -68,11 +68,8 @@ def global_init(param):
     ROOT.gPluginMgr.AddHandler("TVirtualTreePlayer", "*", "TTreePlayer", "TreePlayer", "TTreePlayer()");
 
     ROOT.gSystem.Load("libfastjet.so")
-    # ROOT.gSystem.Load("libLHAPDF.so")
-    # ROOT.gROOT.LoadMacro("LHAGlue.h+")
     ROOT.gROOT.LoadMacro("TSelectorMain.C+")
     ROOT.gROOT.LoadMacro("TSelectorAnalyzer.C+")
-    #ROOT.gROOT.LoadMacro("TSelectorWrite.C+")
     ROOT.gROOT.LoadMacro("TSelectorReader.C+")
 
 
@@ -535,7 +532,7 @@ def train(gp,param, x_train, y_train, x_test, y_test):
 
   ## Input placeholders
   with tf.name_scope('input'):
-    x = tf.placeholder(tf.float32, [None, indim], name='x-input')
+    x  = tf.placeholder(tf.float32, [None, indim], name='x-input')
     y_ = tf.placeholder(tf.float32, [None, 2], name='y-input')
 
   ##with tf.name_scope('input_reshape'):
@@ -635,8 +632,8 @@ def train(gp,param, x_train, y_train, x_test, y_test):
   ## Merge all the summaries and write them out to
   ## /tmp/tensorflow/mnist/logs/mnist_with_summaries (by default)
   merged = tf.summary.merge_all()
-  train_writer = tf.summary.FileWriter(param.log_dir + '/train', sess.graph)
-  test_writer = tf.summary.FileWriter(param.log_dir + '/test')
+  train_writer = tf.summary.FileWriter(param.log_dir + '/train/'+param.run_dir, sess.graph)
+  test_writer  = tf.summary.FileWriter(param.log_dir + '/test/'+param.run_dir)
   tf.global_variables_initializer().run()
 
   # Train the model, and also write summaries.
@@ -795,6 +792,7 @@ class Parameters:
         parser.add_argument("-vbf_eval", "--vbf_eval", dest="VBFFILE_EVAL", required=True, help="Root Ntuple for evaluating VBF")
         parser.add_argument('--learning_rate', type=float, dest="learning_rate", default=0.0001,help='Initial learning rate')
         parser.add_argument('--log_dir', type=str, dest='log_dir', default='/data/greiner/NTupleAnalyzer/tensorflow',help='Summaries log directory')
+        parser.add_argument('--run_dir', type=str, dest='run_dir', default='run1',help='Log directory for single run')
         parser.add_argument('--dropout', type=float, dest="dropout", default=0.9,help='Keep probability for training dropout.')
         parser.add_argument('--max_steps', type=int, dest="max_steps", default=2000,
                       help='Number of steps to run trainer.')
@@ -842,7 +840,8 @@ class Parameters:
         self.GGFFILE_EVAL    = args.GGFFILE_EVAL
         self.VBFFILE_EVAL    = args.VBFFILE_EVAL
         self.learning_rate   = args.learning_rate
-        self.log_dir          = args.log_dir
+        self.log_dir         = args.log_dir
+        self.run_dir         = args.run_dir
         self.dropout         = args.dropout
         self.max_steps  = args.max_steps
 
