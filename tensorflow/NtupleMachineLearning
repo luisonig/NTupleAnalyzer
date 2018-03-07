@@ -300,7 +300,7 @@ def main(param):
     if param.events < 0:
       chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)
     else:
-      chain.Process(tr_reader, "", 5*int(param.events), 0)
+      chain.Process(tr_reader, "", 10*int(param.events), 0)
     ggf_size=len(AnalyzerSelector.pth)
 
 
@@ -337,23 +337,24 @@ def main(param):
         yjjlist_train.append([AnalyzerSelector.yjj[i]])
         zstarlist_train.append([AnalyzerSelector.zstar[i]])
         Rptjetlist_train.append([AnalyzerSelector.Rptjet[i]])
+        weights_train.append([AnalyzerSelector.me_weight[i]])
 
         if param.multip == 3:
             zstarj3list_train.append([AnalyzerSelector.zstarj3[i]])
 
-        weights_train.append(AnalyzerSelector.weightlist[i])
 
         if param.multip == 2:
             observable_list_train.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
                                           AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
                                           AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
-                                          AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i]])
+                                          AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.me_weight[i]])
 
         if param.multip == 3:
             observable_list_train.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
                                           AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
                                           AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
-                                          AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i]])
+                                          AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i],
+                                          AnalyzerSelector.me_weight[i]])
 
     make2dplot(["pth","ptj1","ptj2","mjj","dphijj","yj1","yj2","yjj","zstar","Rptjet"],observable_list_train,ggf_size,tot_size)
 
@@ -441,7 +442,7 @@ def main(param):
     if param.events < 0:
       chain.Process(eval_reader, "", chain.GetMaxEntryLoop(), 0)
     else:
-      chain.Process(eval_reader, "", 5*int(param.events), 0)
+      chain.Process(eval_reader, "", 10*int(param.events), 0)
     ggf_size=len(AnalyzerSelector.pth)
 
 
@@ -476,23 +477,24 @@ def main(param):
         yj2list_test.append(AnalyzerSelector.yj2[i])
         yjjlist_test.append(AnalyzerSelector.yjj[i])
         zstarlist_test.append(AnalyzerSelector.zstar[i])
+        weights_test.append(AnalyzerSelector.me_weight[i])
 
         if param.multip == 3:
             zstarj3list_test.append(AnalyzerSelector.zstarj3[i])
         Rptjetlist_test.append(AnalyzerSelector.Rptjet[i])
-        weights_test.append(AnalyzerSelector.weightlist[i])
 
         if param.multip == 2:
             observable_list_test.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
                                          AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
                                          AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
-                                         AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i]])
+                                         AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.me_weight[i]])
 
         if param.multip == 3:
             observable_list_test.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
                                          AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
                                          AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
-                                         AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i]])
+                                         AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i],
+                                         AnalyzerSelector.me_weight[i]])
 
 
     y_final=train(gp,param,observable_list_train, proc_type_train, observable_list_test, proc_type_test)
@@ -675,6 +677,14 @@ def train(gp,param, x_train, y_train, x_test, y_test):
       k = 1.0
     return {x: xs, y_: ys, keep_prob: k}
 
+  #def argmax(y):
+      #y_=[]
+      #for element in y:
+        #if y[element][0]>[element]y[1]:
+            #y_.append(0)
+        #else:
+            #y_append
+
   for i in range(param.max_steps):
     if i % 10 == 0:  # Record summaries and test-set accuracy
       summary, acc = sess.run([merged, accuracy], feed_dict=feed_dict(gp,False))
@@ -697,8 +707,68 @@ def train(gp,param, x_train, y_train, x_test, y_test):
     if i==param.max_steps-1:
         summary, acc, y, y_ = sess.run([merged, accuracy, y, y_], feed_dict=feed_dict(gp, False))
         ysoft= tf.nn.softmax(y)
-        #print sess.run(ysoft)
-        #print y_
+        
+        print "Total number of events " , len(x_test)
+        nr_ggf=0
+        nr_vbf=0
+        nr_ggf_rec=0
+        nr_vbf_rec=0
+        for i in range(len(x_test)):
+            if y_[i][0]==0.0:
+                nr_vbf +=1
+            elif y_[i][0]==1.0:
+                nr_ggf+=1
+            if y[i][0]>y[i][1]:
+                nr_ggf_rec+=1
+            elif y[i][0]<y[i][1]:
+                nr_vbf_rec+=1
+                
+        print "Number of GGF events ", nr_ggf
+        print "Number of VBF events ", nr_vbf
+        print "Number of reconstructed GGF events ", nr_ggf_rec
+        print "Number of reconstructed VBF events ", nr_vbf_rec
+        print ""        
+
+        prob_range = [0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,0.99]
+        
+        for prob in prob_range:
+          x_new=[]
+          y_new=[]
+          yuscore_new=[]
+          for i in range(len(x_test)):
+              if sess.run(ysoft)[i][0] >prob or sess.run(ysoft)[i][1] >prob:
+                x_new.append(x_test[i])
+                y_new.append(y[i])
+                yuscore_new.append(y_[i])
+
+          nr_ggf_new=0
+          nr_vbf_new=0
+          nr_ggf_rec_new=0
+          nr_vbf_rec_new=0
+          for i in range(len(x_new)):
+              if yuscore_new[i][0]==0.0:
+                  nr_vbf_new +=1
+              elif yuscore_new[i][0]==1.0:
+                  nr_ggf_new+=1
+              if y_new[i][0]>y_new[i][1]:
+                  nr_ggf_rec_new+=1
+              elif y_new[i][0]<y_new[i][1]:
+                  nr_vbf_rec_new+=1        
+
+          print ""
+          print " Results after cut on probability:", prob        
+          print "Total number of events ", len(x_new)
+          print "Number of GGF events ", nr_ggf_new
+          print "Number of VBF events ", nr_vbf_new
+          print "Number of reconstructed GGF events ", nr_ggf_rec_new
+          print "Number of reconstructed VBF events ", nr_vbf_rec_new        
+        
+          y_new=np.array(y_new)
+          yuscore_new=np.array(yuscore_new)
+          correct_prediction = tf.equal(tf.argmax(y_new, 1), tf.argmax(yuscore_new, 1))
+          accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+          print "accuracy_new", sess.run(accuracy)
+        sys.exit()
   train_writer.close()
   test_writer.close()
 
@@ -726,7 +796,7 @@ class Parameters:
         parser.add_argument('--learning_rate', type=float, dest="learning_rate", default=0.0001,help='Initial learning rate')
         parser.add_argument('--log_dir', type=str, dest='log_dir', default='/data/greiner/NTupleAnalyzer/tensorflow',help='Summaries log directory')
         parser.add_argument('--dropout', type=float, dest="dropout", default=0.9,help='Keep probability for training dropout.')
-        parser.add_argument('--max_steps', type=int, dest="max_steps", default=10000,
+        parser.add_argument('--max_steps', type=int, dest="max_steps", default=2000,
                       help='Number of steps to run trainer.')
 
         #parser_ana = subparser.add_parser('analysis', help='analysis help (add this mode for more specific help)')

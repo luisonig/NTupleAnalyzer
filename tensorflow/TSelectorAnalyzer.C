@@ -188,7 +188,7 @@ void TSelectorAnalyzer::TestAnalysis()
    dphijj.push_back(abs(jets[0].phi()-jets[1].phi()));
    
    //returning weight;
-   weightlist.push_back(orig_weight());
+   me_weight.push_back(orig_me_wgt());
   }
   
   
