@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+# Import needed python packages:
 import sys
 import os
 import re
@@ -21,7 +22,17 @@ except NameError:
 
 ###
 
-class Globalparams():
+class GlobalParameters():
+    """
+    Global class for data parameters. This includes:
+    
+    Methods:
+    index_in_epoch -- returns XXX
+    epochs_completed -- retuns YYY
+    num_examples -- return the number of training examples
+
+    """
+    
     def __init__(self):
         self._index_in_epoch = 0
         self._epochs_completed = 0
@@ -36,8 +47,19 @@ class Globalparams():
     def num_examples(self):
         return self._num_examples
 
-def global_init(param):
 
+    
+def root_init(parameters):
+    """
+    Initializes ROOT stuff and compiles ROOT libraries
+
+    Arguments:
+    parameters -- InputParameter type variable with command line input parameters
+
+    Returns:
+    -
+
+    """
     global ROOT
     try:
         ROOT
@@ -50,7 +72,7 @@ def global_init(param):
     try:
         ntupleanalyzer_path = os.path.abspath(os.path.dirname(__file__))
         if not ntupleanalyzer_path:
-            ntupleanalyzer_path = param.sourcepath
+            ntupleanalyzer_path = parameters.sourcepath
             if not ntupleanalyzer_path:
                 raise ValueError('Empty path to NtupleAnalyzer source: add it to input with --sourcepath=<your_path>')
     except ValueError as e:
@@ -234,7 +256,7 @@ def make2dplot(observables,train,ggf_size,tot_size):
                 continue
             k+=1
             plt.subplot(250+k)
-            plt.plot(data[0:ggf_size,j], data[0:ggf_size,i], 'r.', data[ggf_size:tot_size,j], data[ggf_size:tot_size,i], 'b.')
+            plt.plot(data[0:ggf_size,j], data[0:ggf_size,i], 'r.', data[ggf_size:tot_size,j], data[ggf_size:tot_size,i], 'b.', markersize=1)
             plt.xlabel(observables[j])
             plt.ylabel(observables[i])
             plt.title('Plot: '+observables[j]+' vs. '+observables[i])
@@ -242,13 +264,134 @@ def make2dplot(observables,train,ggf_size,tot_size):
         plt.savefig('Figure'+str(j+1)+'.png')
     #plt.show()
 
-def main(param):
+
+def load_data(ip, gp, mode):
+    """
+    Loads data from ROOT NTuples both for training and for test sets
+
+    Arguments:
+    ip -- InputParameter type variable
+    gp -- GlobalParameter type variable
+    mode -- string defining the running more ( can be set equal to 'train' or 'test')
+
+    Returns:
+
+
+    """
+
+    
+    #// Define reader selector:
+    TReader = ROOT.TSelectorReader()
+
+    #// Analysis Selectors:
+    AnalyzerSelector = ROOT.TSelectorAnalyzer()
+    AnalyzerSelector.multip = ip.multip
+    TReader.addSelector(AnalyzerSelector)
+
+    proc_type=[]
+    pthlist=[]
+    ptj1list=[]
+    ptj2list=[]
+    mjjlist=[]
+    dphijjlist=[]
+    yj1list=[]
+    yj2list=[]
+    yjjlist=[]
+    zstarlist=[]
+    zstarj3list=[]
+    Rptjetlist=[]
+    weights=[]
+    observable_list=[]
+
+    #// Define chain and add file list:
+    chain = ROOT.TChain("t3")
+
+    if mode == 'train':
+        chain.Add(ip.GGFFILE_TRAIN)
+    elif mode == 'devel':
+        chain.Add(ip.GGFFILE_EVAL)
+    else:
+        raise ValueError("Not valid mode. Mode should be 'train' or 'devel'.")
+
+    chain.GetFile()  # force opening of the first file
+    chain.SetMaxEntryLoop(2**60)
+    if ip.events < 0:
+      chain.Process(TReader, "", chain.GetMaxEntryLoop(), 0)
+    else:
+      chain.Process(TReader, "", 10*int(ip.events), 0)
+    ggf_size=len(AnalyzerSelector.pth)
+
+
+    chain = ROOT.TChain("t3")
+    chain.Add(ip.VBFFILE_TRAIN)
+    chain.GetFile()  # force opening of the first file
+    chain.SetMaxEntryLoop(2**60)
+    if ip.events < 0:
+      chain.Process(TReader, "", chain.GetMaxEntryLoop(), 0)
+    else:
+      chain.Process(TReader, "", int(ip.events), 0)
+    tot_size=len(AnalyzerSelector.pth)
+    gp._num_examples = tot_size
+
+
+    vbf_size=tot_size-ggf_size
+    print "ggf_size train", ggf_size
+    print "vbf_size train", vbf_size
+
+    for i in range(ggf_size):
+        proc_type.append([1.,0.])
+    for i in range(vbf_size):
+        proc_type.append([0.,1.])
+
+
+    for i in range(tot_size):
+        pthlist.append(AnalyzerSelector.pth[i])
+        ptj1list.append([AnalyzerSelector.ptj1[i]])
+        ptj2list.append([AnalyzerSelector.ptj2[i]])
+        mjjlist.append([AnalyzerSelector.mjj[i]])
+        dphijjlist.append([AnalyzerSelector.dphijj[i]])
+        yj1list.append([AnalyzerSelector.yj1[i]])
+        yj2list.append([AnalyzerSelector.yj2[i]])
+        yjjlist.append([AnalyzerSelector.yjj[i]])
+        zstarlist.append([AnalyzerSelector.zstar[i]])
+        Rptjetlist.append([AnalyzerSelector.Rptjet[i]])
+        weights.append([AnalyzerSelector.me_weight[i]])
+
+        if ip.multip == 3:
+            zstarj3list.append([AnalyzerSelector.zstarj3[i]])
+
+
+        if ip.multip == 2:
+            observable_list.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
+                                          AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
+                                          AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
+                                          AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.me_weight[i]])
+
+        if ip.multip == 3:
+            observable_list.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
+                                          AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
+                                          AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
+                                          AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i],
+                                          AnalyzerSelector.me_weight[i]])
+
+    # So far all ggf data are first and all vbf data are after
+    # Reshuffle data such that ggf and vbf events appear alternating:
+    perm = np.arange(gp.num_examples())
+    np.random.seed(1)
+    np.random.shuffle(perm)
+    x_train = np.array(observable_list)[perm]
+    y_train = np.array(proc_type)[perm]
+    
+    return x_train, y_train, ggf_size, vbf_size
+    
+    
+def main(ip):
 
     # Store starting time:
     start_time = time.time()
 
     # Initialize can compile in ROOT:
-    global_init(param)
+    root_init(ip)
 
     # We want to handle Ctrl+C
     sh = ROOT.TSignalHandler(ROOT.kSigInterrupt, False)
@@ -259,242 +402,20 @@ def main(param):
     #// Perform trainigs:
     # *****************************************************
 
-    #if param.mode == 'training':
+    #if ip.mode == 'training':
 
-    print"Training"
-    gp=Globalparams()
+    print "--> Load training data ..."
+    gp=GlobalParameters()
+    
+    x_train, y_train, ggf_size, vbf_size = load_data(ip, gp, 'train')
+    
+    make2dplot(["pth","ptj1","ptj2","mjj","dphijj","yj1","yj2","yjj","zstar","Rptjet"],x_train,ggf_size,gp._num_examples)
+    
+    print "--> Load development data ..."
 
-    #// Define reader selector:
-    tr_reader = ROOT.TSelectorReader()
-
-    #// Analysis Selectors:
-    AnalyzerSelector = ROOT.TSelectorAnalyzer()
-    AnalyzerSelector.multip = param.multip
-    tr_reader.addSelector(AnalyzerSelector)
-
-
-    proc_type_train=[]
-    pthlist_train=[]
-    ptj1list_train=[]
-    ptj2list_train=[]
-    mjjlist_train=[]
-    dphijjlist_train=[]
-    yj1list_train=[]
-    yj2list_train=[]
-    yjjlist_train=[]
-    zstarlist_train=[]
-    zstarj3list_train=[]
-    Rptjetlist_train=[]
-
-    observable_list_train=[]
-    weights_train=[]
-
-    #// Define chain and add file list:
-    chain = ROOT.TChain("t3")
-    chain.Add(param.GGFFILE_TRAIN)
-    chain.GetFile()  # force opening of the first file
-    chain.SetMaxEntryLoop(2**60)
-    if param.events < 0:
-      chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)
-    else:
-      chain.Process(tr_reader, "", 10*int(param.events), 0)
-    ggf_size=len(AnalyzerSelector.pth)
-
-
-    chain = ROOT.TChain("t3")
-    chain.Add(param.VBFFILE_TRAIN)
-    chain.GetFile()  # force opening of the first file
-    chain.SetMaxEntryLoop(2**60)
-    if param.events < 0:
-      chain.Process(tr_reader, "", chain.GetMaxEntryLoop(), 0)
-    else:
-      chain.Process(tr_reader, "", int(param.events), 0)
-    tot_size=len(AnalyzerSelector.pth)
-    gp._num_examples = tot_size
-
-
-    vbf_size=tot_size-ggf_size
-    print "ggf_size train", ggf_size
-    print "vbf_size train", vbf_size
-
-    for i in range(ggf_size):
-        proc_type_train.append([1.,0.])
-    for i in range(vbf_size):
-        proc_type_train.append([0.,1.])
-
-
-    for i in range(tot_size):
-        pthlist_train.append(AnalyzerSelector.pth[i])
-        ptj1list_train.append([AnalyzerSelector.ptj1[i]])
-        ptj2list_train.append([AnalyzerSelector.ptj2[i]])
-        mjjlist_train.append([AnalyzerSelector.mjj[i]])
-        dphijjlist_train.append([AnalyzerSelector.dphijj[i]])
-        yj1list_train.append([AnalyzerSelector.yj1[i]])
-        yj2list_train.append([AnalyzerSelector.yj2[i]])
-        yjjlist_train.append([AnalyzerSelector.yjj[i]])
-        zstarlist_train.append([AnalyzerSelector.zstar[i]])
-        Rptjetlist_train.append([AnalyzerSelector.Rptjet[i]])
-        weights_train.append([AnalyzerSelector.me_weight[i]])
-
-        if param.multip == 3:
-            zstarj3list_train.append([AnalyzerSelector.zstarj3[i]])
-
-
-        if param.multip == 2:
-            observable_list_train.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
-                                          AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
-                                          AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
-                                          AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.me_weight[i]])
-
-        if param.multip == 3:
-            observable_list_train.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
-                                          AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
-                                          AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
-                                          AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i],
-                                          AnalyzerSelector.me_weight[i]])
-
-    make2dplot(["pth","ptj1","ptj2","mjj","dphijj","yj1","yj2","yjj","zstar","Rptjet"],observable_list_train,ggf_size,tot_size)
-
-    #makeplot("pTH_ggf",pthlist_train[0:ggf_size],weights_train[0:ggf_size])
-    #sys.exit()
-
-    #Shuffling the training data
-    perm = np.arange(gp.num_examples())
-    np.random.shuffle(perm)
-    observable_list_train=np.array(observable_list_train)[perm]
-    proc_type_train=np.array(proc_type_train)[perm]
-
-
-
-    # Start training
-
-    #x=tf.placeholder(tf.float32, [None, 7])
-    #W = tf.Variable(tf.zeros([7,2]))
-    #b = tf.Variable(tf.zeros([2]))
-    #y = tf.nn.softmax(tf.matmul(x,W) +b)
-
-    #y_ = tf.placeholder(tf.float32, [None,2])
-    #cross_entropy = tf.reduce_mean(-tf.reduce_sum(y_*tf.log(y), reduction_indices=[1]))
-    #tf.summary.scalar('cross_entropy', cross_entropy)
-    #train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
-    #sess= tf.InteractiveSession()
-
-    #merged=tf.summary.merge_all()
-    #train_writer = tf.summary.FileWriter('/data/greiner/NTupleAnalyzer/tensorflow', sess.graph)
-
-    #correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
-    #accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    #tf.summary.scalar('accuracy', accuracy)
-    #tf.summary.histogram('histogram', accuracy)
-
-    #tf.global_variables_initializer().run()
-
-    #print "ggf_size", ggf_size
-    #print "vbf_size", vbf_size
-    #for i in range(5):
-     #batch_x = observable_list[i*2000:(i+1)*2000]
-     #batch_y = proc_type[i*2000:(i+1)*2000]
-     #sess.run(train_step, feed_dict={x: batch_x, y_: batch_y})
-     #summary, accuracy = sess.run([merged,accuracy], feed_dict={x: batch_x, y_: batch_y})
-     #train_writer.add_summary(summary,i)
-
-    #sess.run(train_step, feed_dict={x: observable_list, y_: proc_type})
-
-
-    #train_writer.add_summary(merged)
-
-    #print "correct_prediction", correct_prediction
-
-
-    print"Evaluation"
-
-    #// Define reader selector:
-    eval_reader = ROOT.TSelectorReader()
-
-    #// Analysis Selectors:
-    AnalyzerSelector = ROOT.TSelectorAnalyzer()
-    AnalyzerSelector.multip = param.multip
-    eval_reader.addSelector(AnalyzerSelector)
-
-    proc_type_test=[]
-    pthlist_test=[]
-    ptj1list_test=[]
-    ptj2list_test=[]
-    mjjlist_test=[]
-    dphijjlist_test=[]
-    yj1list_test=[]
-    yj2list_test=[]
-    yjjlist_test=[]
-    zstarlist_test=[]
-    zstarj3list_test=[]
-    Rptjetlist_test=[]
-    weights_test=[]
-    observable_list_test=[]
-
-    #// Define chain and add file list:
-    chain = ROOT.TChain("t3")
-    chain.Add(param.GGFFILE_EVAL)
-    chain.GetFile()  # force opening of the first file
-    chain.SetMaxEntryLoop(2**60)
-    if param.events < 0:
-      chain.Process(eval_reader, "", chain.GetMaxEntryLoop(), 0)
-    else:
-      chain.Process(eval_reader, "", 10*int(param.events), 0)
-    ggf_size=len(AnalyzerSelector.pth)
-
-
-    chain = ROOT.TChain("t3")
-    chain.Add(param.VBFFILE_EVAL)
-    chain.GetFile()  # force opening of the first file
-    chain.SetMaxEntryLoop(2**60)
-    if param.events < 0:
-      chain.Process(eval_reader, "", chain.GetMaxEntryLoop(), 0)
-    else:
-      chain.Process(eval_reader, "", int(param.events), 0)
-    tot_size=len(AnalyzerSelector.pth)
-
-
-    vbf_size=tot_size-ggf_size
-    print "ggf_size test", ggf_size
-    print "vbf_size test", vbf_size
-
-    for i in range(ggf_size):
-        proc_type_test.append([1.,0.])
-    for i in range(vbf_size):
-        proc_type_test.append([0.,1.])
-
-
-    for i in range(tot_size):
-        pthlist_test.append(AnalyzerSelector.pth[i])
-        ptj1list_test.append(AnalyzerSelector.ptj1[i])
-        ptj2list_test.append(AnalyzerSelector.ptj2[i])
-        mjjlist_test.append(AnalyzerSelector.mjj[i])
-        dphijjlist_test.append(AnalyzerSelector.dphijj[i])
-        yj1list_test.append(AnalyzerSelector.yj1[i])
-        yj2list_test.append(AnalyzerSelector.yj2[i])
-        yjjlist_test.append(AnalyzerSelector.yjj[i])
-        zstarlist_test.append(AnalyzerSelector.zstar[i])
-        weights_test.append(AnalyzerSelector.me_weight[i])
-
-        if param.multip == 3:
-            zstarj3list_test.append(AnalyzerSelector.zstarj3[i])
-        Rptjetlist_test.append(AnalyzerSelector.Rptjet[i])
-
-        if param.multip == 2:
-            observable_list_test.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
-                                         AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
-                                         AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
-                                         AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.me_weight[i]])
-
-        if param.multip == 3:
-            observable_list_test.append([AnalyzerSelector.pth[i],AnalyzerSelector.ptj1[i],
-                                         AnalyzerSelector.ptj2[i],AnalyzerSelector.mjj[i],AnalyzerSelector.dphijj[i],
-                                         AnalyzerSelector.yj2[i],AnalyzerSelector.yj2[i],AnalyzerSelector.yjj[i],
-                                         AnalyzerSelector.zstar[i],AnalyzerSelector.Rptjet[i],AnalyzerSelector.zstarj3[i],
-                                         AnalyzerSelector.me_weight[i]])
-
-
-    y_final=train(gp,param,observable_list_train, proc_type_train, observable_list_test, proc_type_test)
+    x_devel, y_devel, ggf_size, vbf_size = load_data(ip, gp, 'devel')
+    
+    y_final=train(gp, ip, x_train, y_train, x_devel, y_devel)
     y_rewrite=[]
     proc_ind = tf.InteractiveSession().run(tf.argmax(y_final, 1))
     for i in range(len(proc_ind)):
@@ -502,11 +423,12 @@ def main(param):
             y_rewrite.append([1.,0.])
         else:
             y_rewrite.append([0.,1.0])
-    makeplot("ptH", pthlist_test, weights_test, ggf_size, y_rewrite)
-    makeplot("mj1j2", mjjlist_test, weights_test, ggf_size, y_rewrite)
-    makeplot("ptj1", ptj1list_test, weights_test, ggf_size, y_rewrite)
-    makeplot("yj1", yj1list_test, weights_test, ggf_size, y_rewrite)
-    makeplot("dphijj", dphijjlist_test, weights_test, ggf_size, y_rewrite)
+
+    #makeplot("ptH", pthlist_test, weights_test, ggf_size, y_rewrite)
+    #makeplot("mj1j2", mjjlist_test, weights_test, ggf_size, y_rewrite)
+    #makeplot("ptj1", ptj1list_test, weights_test, ggf_size, y_rewrite)
+    #makeplot("yj1", yj1list_test, weights_test, ggf_size, y_rewrite)
+    #makeplot("dphijj", dphijjlist_test, weights_test, ggf_size, y_rewrite)
 
     print "Run time: %d seconds" % (time.time() - start_time)
 
@@ -517,15 +439,13 @@ def main(param):
 
 
 def train(gp,param, x_train, y_train, x_test, y_test):
-  # Import data
-  #mnist = input_data.read_data_sets(FLAGS.data_dir,
-                                    #one_hot=True,
-                                    #fake_data=FLAGS.fake_data)
 
   print "in train"
 
   indim = len(x_train[0])
 
+  tf.set_random_seed(1)
+  
   #sess = tf.InteractiveSession(config=tf.ConfigProto(device_count={"CPU":8}))
   sess = tf.InteractiveSession(config=tf.ConfigProto(inter_op_parallelism_threads=8))
   ## Create a multilayer model.
@@ -534,12 +454,6 @@ def train(gp,param, x_train, y_train, x_test, y_test):
   with tf.name_scope('input'):
     x  = tf.placeholder(tf.float32, [None, indim], name='x-input')
     y_ = tf.placeholder(tf.float32, [None, 2], name='y-input')
-
-  ##with tf.name_scope('input_reshape'):
-    ###image_shaped_input = tf.reshape(x, [-1, 28, 28, 1])
-    ###tf.summary.image('input', image_shaped_input, 10)
-    ##image_shaped_input = tf.reshape(x, 7)
-    ##tf.summary.image('input', image_shaped_input, 2)
 
   # We can't initialize these variables to 0 - the network will get stuck.
   def weight_variable(shape):
@@ -640,7 +554,7 @@ def train(gp,param, x_train, y_train, x_test, y_test):
   # Every 10th step, measure test-set accuracy, and write test summaries
   # All other steps, run train_step on training data, & add training summaries
 
-  def next_batch( gp,batch_size, xs, ys):
+  def next_batch(gp, batch_size, xs, ys):
     start = gp.index_in_epoch()
 
     if start + batch_size > gp.num_examples():
@@ -674,19 +588,13 @@ def train(gp,param, x_train, y_train, x_test, y_test):
       k = 1.0
     return {x: xs, y_: ys, keep_prob: k}
 
-  #def argmax(y):
-      #y_=[]
-      #for element in y:
-        #if y[element][0]>[element]y[1]:
-            #y_.append(0)
-        #else:
-            #y_append
 
   for i in range(param.max_steps):
     if i % 10 == 0:  # Record summaries and test-set accuracy
       summary, acc = sess.run([merged, accuracy], feed_dict=feed_dict(gp,False))
       test_writer.add_summary(summary, i)
       print('Accuracy at step %s: %s' % (i, acc))
+      
     else:  # Record train set summaries, and train
       if i % 100 == 99:  # Record execution stats
         run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
@@ -773,7 +681,7 @@ def train(gp,param, x_train, y_train, x_test, y_test):
 
 
 
-class Parameters:
+class InputParameters:
 
     def __init__(self):
 
@@ -890,14 +798,9 @@ class Parameters:
 
 if __name__ == '__main__':
 
-    input_param = Parameters()
-    input_param.print_parameters()
+    input_parameters = InputParameters()
+    input_parameters.print_parameters()
 
-    main(input_param)
+    main(input_parameters)
 
 
-# Example of lauch command for reweighting:
-#
-#     ./NtupleAnalyzer reweight -m 2 --debug --events=10 --output=test.root EDNTuplesFiles/H2.0j_amegic_GGFHT_B_6500_pt25.0_eta4.5_CT10nlo_r100_100.root
-#
-#
