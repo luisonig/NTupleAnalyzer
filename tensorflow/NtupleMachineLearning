@@ -13,6 +13,8 @@ import tensorflow as tf
 import numpy as np
 import pylab as P
 import matplotlib.pyplot as plt
+from   matplotlib import rc
+
 
 # python 2.4 does not have any and all
 try: any, all
@@ -243,6 +245,21 @@ def makeplot(title, x, weights, ggf_size, y):
 
 def make2dplot(observables, data, ggf_size, tot_size):
 
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif')
+
+    obs_to_label={"pth": "$p_{t,\,\mathrm{H}}$",
+                  "ptj1": "$p_{t,\,\mathrm{j}_{1}}$",
+                  "ptj2": "$p_{t,\,\mathrm{j}_{1}}$",
+                  "mjj": "$m_{j_{1}j_{2}}$",
+                  "dphijj": "$d\phi_{j_{1}j_{2}}$",
+                  "yj1": "$y_{j_{1}}$",
+                  "yj2": "$y_{j_{2}}$",
+                  "yjj": "$y_{j_{1}j_{2}}$",
+                  "zstar": "$z^{\star}$",
+                  "Rptjet": "$R_{p_{t,\,j}}$",
+                  "ME": "ME"}
+    
     for j in range(0, len(observables)):
         plt.figure(j+1, figsize=(18,8))
         k=0
@@ -250,11 +267,13 @@ def make2dplot(observables, data, ggf_size, tot_size):
             if i == j:
                 continue
             k+=1
-            plt.subplot(250+k)
-            plt.plot(data[j, 0:ggf_size], data[i, 0:ggf_size], 'r.', data[j, ggf_size:tot_size], data[i, ggf_size:tot_size], 'b.', markersize=1)
-            plt.xlabel(observables[j])
-            plt.ylabel(observables[i])
-            plt.title('Plot: '+observables[j]+' vs. '+observables[i])
+            plt.subplot(2,5,k)
+            plt.plot(data[j, 0:ggf_size], data[i, 0:ggf_size], 'r.', label='GGF', markersize=1)
+            plt.plot(data[j, ggf_size:tot_size], data[i, ggf_size:tot_size], 'b.', label='VBF', markersize=1)
+            plt.xlabel(r""+obs_to_label[observables[j]]+"")
+            plt.ylabel(r""+obs_to_label[observables[i]]+"")
+            plt.title(r"Plot: "+obs_to_label[observables[j]]+" vs. "+obs_to_label[observables[i]])
+            plt.legend(loc='best', ncol=1)
         plt.tight_layout()
         plt.savefig('Figure'+str(j+1)+'.png')
     #plt.show()
@@ -417,8 +436,9 @@ def main(ip):
     print(" Size of ggf training sample: %i events" % ggf_size)
     print(" Size of vbf training sample: %i events" % vbf_size)
 
-    make2dplot(["pth","ptj1","ptj2","mjj","dphijj","yj1","yj2","yjj","zstar","Rptjet"], x_train, ggf_size, gp._num_examples)
+    make2dplot(["pth","ptj1","ptj2","mjj","dphijj","yj1","yj2","yjj","zstar","Rptjet","ME"], x_train, ggf_size, gp._num_examples)
 
+    sys.exit()
     #x_train_norm = normalize_input(x_train)
     
     print "--> Load development data ..."
