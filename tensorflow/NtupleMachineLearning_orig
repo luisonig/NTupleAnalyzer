@@ -486,13 +486,13 @@ def nn_layer(input_tensor, output_dim, input_dim, layer_name, act=tf.nn.relu):
     with tf.name_scope(layer_name):
         # This Variable will hold the state of the weights for the layer
         with tf.name_scope('weights'):
-            weights = weight_variable("W_"+layer_name, [output_dim, input_dim])
+            weights = weight_variable("W_"+layer_name, [input_dim, output_dim])
             variable_summaries(weights)
         with tf.name_scope('biases'):
-            biases = bias_variable("b_"+layer_name, [output_dim, 1])
+            biases = bias_variable("b_"+layer_name, [output_dim])
             variable_summaries(biases)
         with tf.name_scope('Wx_plus_b'):
-            preactivate = tf.add(tf.matmul(weights, input_tensor), biases)
+            preactivate = tf.add(tf.matmul(input_tensor, weights), biases)
             tf.summary.histogram('pre_activations', preactivate)
         activations = act(preactivate, name='activation')
         tf.summary.histogram('activations', activations)
@@ -505,21 +505,21 @@ def next_batch(gp, batch_size, xs, ys):
         gp._epochs_completed +=1
         # Get the rest examples in this epoch
         rest_num_examples = gp.num_examples() - start
-        xs_rest_part = xs[:, start:gp.num_examples()]
-        ys_rest_part = ys[:, start:gp.num_examples()]
+        xs_rest_part = xs[start:gp.num_examples()]
+        ys_rest_part = ys[start:gp.num_examples()]
         
         start = 0
         gp._index_in_epoch = batch_size - rest_num_examples
         end = gp.index_in_epoch()
-        xs_new_part = xs[:, start:end]
-        ys_new_part = ys[:, start:end]
-        xs=np.concatenate((xs_rest_part, xs_new_part), axis=1)
-        ys=np.concatenate((ys_rest_part, ys_new_part), axis=1)
+        xs_new_part = xs[start:end]
+        ys_new_part = ys[start:end]
+        xs=np.concatenate((xs_rest_part, xs_new_part), axis=0)
+        ys=np.concatenate((ys_rest_part, ys_new_part), axis=0)
         return xs, ys
     else:
         gp._index_in_epoch += batch_size
         end = gp.index_in_epoch()
-        return xs[:, start:end], ys[:, start:end]
+        return xs[start:end], ys[start:end]
     
 ##--] Tensorflow functions
     
@@ -536,8 +536,8 @@ def train(gp, ip, x_train, y_train, x_test, y_test):
     # print y_test.shape
 
     # Input/output layer dimensions
-    n_x = x_train.shape[0]
-    n_y = y_train.shape[0]
+    n_x = x_train.shape[1]
+    n_y = y_train.shape[1]
     
     #--> set random seed: only for testing purposes - TO BE REMOVED
     tf.set_random_seed(1)
@@ -546,14 +546,14 @@ def train(gp, ip, x_train, y_train, x_test, y_test):
 
     # Input placeholders
     with tf.name_scope('input'):
-        x  = tf.placeholder(tf.float32, [n_x, None], name='x-input')
-        y_ = tf.placeholder(tf.float32, [n_y, None], name='y-input')
+        x  = tf.placeholder(tf.float32, [None, n_x], name='x-input')
+        y_ = tf.placeholder(tf.float32, [None, n_y], name='y-input')
 
     # First FC hidden layer with 200 units
     hidden1 = nn_layer(x, 200, n_x, 'layer1')
-
+    
     # Second FC hidden layer with 50 units
-    hidden2 = nn_layer(hidden1, 50, 200, 'layer2')
+    hidden2 = nn_layer(hidden1, 50, 200, 'layer3')
 
     # Dropout layer
     with tf.name_scope('dropout'):
@@ -573,7 +573,7 @@ def train(gp, ip, x_train, y_train, x_test, y_test):
         # tf.nn.softmax_cross_entropy_with_logits on the raw outputs
         # of the nn_layer above, and then average across the batch.
         # --> will have to be substituted with tf.nn.softmax_cross_entropy_with_logits_v2 (see tf online manual)
-        diff = tf.nn.softmax_cross_entropy_with_logits(labels=tf.transpose(y_), logits=tf.transpose(y))
+        diff = tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y)
         with tf.name_scope('total'):
             cross_entropy = tf.reduce_mean(diff)
     tf.summary.scalar('cross_entropy', cross_entropy)
@@ -588,7 +588,7 @@ def train(gp, ip, x_train, y_train, x_test, y_test):
 
     with tf.name_scope('accuracy'):
         with tf.name_scope('correct_prediction'):
-            correct_prediction = tf.equal(tf.argmax(y, axis=0), tf.argmax(y_, axis=0))
+            correct_prediction = tf.equal(tf.argmax(y, axis=1), tf.argmax(y_, axis=1))
         with tf.name_scope('accuracy'):
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     tf.summary.scalar('accuracy', accuracy)
@@ -639,23 +639,23 @@ def train(gp, ip, x_train, y_train, x_test, y_test):
                 train_writer.add_summary(summary, i)
         if i==ip.max_steps-1:
             summary, acc, y, y_ = sess.run([merged, accuracy, y, y_], feed_dict=feed_dict(gp, False))
-            ysoft= tf.nn.softmax(tf.transpose(y))
+            ysoft= tf.nn.softmax(y)
             
             print "Total number of events " , len(x_test)
             nr_ggf=0
             nr_vbf=0
             nr_ggf_rec=0
             nr_vbf_rec=0
-            for i in range(x_test.shape[1]):
-                if y_[0, i]==0.0:
+            for i in range(x_test.shape[0]):
+                if y_[i, 0]==0.0:
                     nr_vbf +=1
-                elif y_[0, i]==1.0:
+                elif y_[i, 0]==1.0:
                     nr_ggf+=1
-                if y[0, i] > y[1, i]:
+                if y[i, 0] > y[i, 1]:
                     nr_ggf_rec+=1
-                elif y[0, i]<y[1, i]:
+                elif y[i, 0]<y[i, 1]:
                     nr_vbf_rec+=1
-                
+
             print "Number of GGF events ", nr_ggf
             print "Number of VBF events ", nr_vbf
             print "Number of reconstructed GGF events ", nr_ggf_rec
@@ -664,44 +664,44 @@ def train(gp, ip, x_train, y_train, x_test, y_test):
 
             prob_range = [0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,0.99]
         
-            # for prob in prob_range:
-            #     x_new=[]
-            #     y_new=[]
-            #     yuscore_new=[]
-            #     for i in range(len(x_test)):
-            #         if sess.run(ysoft)[i][0] >prob or sess.run(ysoft)[i][1] >prob:
-            #             x_new.append(x_test[i])
-            #             y_new.append(y[i])
-            #             yuscore_new.append(y_[i])
+            for prob in prob_range:
+                x_new=[]
+                y_new=[]
+                yuscore_new=[]
+                for i in range(len(x_test)):
+                    if sess.run(ysoft)[i][0] >prob or sess.run(ysoft)[i][1] >prob:
+                        x_new.append(x_test[i])
+                        y_new.append(y[i])
+                        yuscore_new.append(y_[i])
 
-            #     nr_ggf_new=0
-            #     nr_vbf_new=0
-            #     nr_ggf_rec_new=0
-            #     nr_vbf_rec_new=0
-            #     for i in range(len(x_new)):
-            #         if yuscore_new[i][0]==0.0:
-            #             nr_vbf_new +=1
-            #         elif yuscore_new[i][0]==1.0:
-            #             nr_ggf_new+=1
-            #         if y_new[i][0]>y_new[i][1]:
-            #             nr_ggf_rec_new+=1
-            #         elif y_new[i][0]<y_new[i][1]:
-            #             nr_vbf_rec_new+=1
+                nr_ggf_new=0
+                nr_vbf_new=0
+                nr_ggf_rec_new=0
+                nr_vbf_rec_new=0
+                for i in range(len(x_new)):
+                    if yuscore_new[i][0]==0.0:
+                        nr_vbf_new +=1
+                    elif yuscore_new[i][0]==1.0:
+                        nr_ggf_new+=1
+                    if y_new[i][0]>y_new[i][1]:
+                        nr_ggf_rec_new+=1
+                    elif y_new[i][0]<y_new[i][1]:
+                        nr_vbf_rec_new+=1
 
-            #     print ""
-            #     print " Results after cut on probability:", prob        
-            #     print "Total number of events ", len(x_new)
-            #     print "Number of GGF events ", nr_ggf_new
-            #     print "Number of VBF events ", nr_vbf_new
-            #     print "Number of reconstructed GGF events ", nr_ggf_rec_new
-            #     print "Number of reconstructed VBF events ", nr_vbf_rec_new        
+                print ""
+                print " Results after cut on probability:", prob        
+                print "Total number of events ", len(x_new)
+                print "Number of GGF events ", nr_ggf_new
+                print "Number of VBF events ", nr_vbf_new
+                print "Number of reconstructed GGF events ", nr_ggf_rec_new
+                print "Number of reconstructed VBF events ", nr_vbf_rec_new        
 
-            #y_new=np.array(y_new)
-            #yuscore_new=np.array(yuscore_new)
-            #correct_prediction = tf.equal(tf.argmax(y_new, 1), tf.argmax(yuscore_new, 1))
-            #accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-            #print "accuracy_new", sess.run(accuracy)
-            
+            y_new=np.array(y_new)
+            yuscore_new=np.array(yuscore_new)
+            correct_prediction = tf.equal(tf.argmax(y_new, 1), tf.argmax(yuscore_new, 1))
+            accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+            print "accuracy_new", sess.run(accuracy)
+
     train_writer.close()
     devel_writer.close()
 
