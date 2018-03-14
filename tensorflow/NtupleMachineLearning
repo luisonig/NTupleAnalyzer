@@ -436,9 +436,9 @@ def main(ip):
     print(" Size of ggf training sample: %i events" % ggf_size)
     print(" Size of vbf training sample: %i events" % vbf_size)
 
-    make2dplot(["pth","ptj1","ptj2","mjj","dphijj","yj1","yj2","yjj","zstar","Rptjet","ME"], x_train, ggf_size, gp._num_examples)
+    if ip.makeplots:
+        make2dplot(["pth","ptj1","ptj2","mjj","dphijj","yj1","yj2","yjj","zstar","Rptjet","ME"], x_train, ggf_size, gp._num_examples)
 
-    sys.exit()
     #x_train_norm = normalize_input(x_train)
     
     print "--> Load development data ..."
@@ -450,7 +450,7 @@ def main(ip):
 
     #x_devel_norm = normalize_input(x_devel)
 
-    y_final=train(gp, ip, x_train.T, y_train.T, x_devel.T, y_devel.T)
+    y_final=train(gp, ip, x_train, y_train, x_devel, y_devel)
     #y_final=train(gp, ip, x_train_norm.T, y_train.T, x_devel_norm.T, y_devel.T)
     
     y_rewrite=[]
@@ -637,8 +637,8 @@ def train(gp, ip, x_train, y_train, x_test, y_test):
     # Every 10th step, measure test-set accuracy, and write test summaries
     # All other steps, run train_step on training data, & add training summaries
 
-    for i in range(ip.max_steps):
-        if i % 10 == 0:  # Record summaries and test-set accuracy
+    for i in range(ip.max_steps+1):
+        if i % 100 == 0:  # Record summaries and test-set accuracy
             summary, acc = sess.run([merged, accuracy], feed_dict=feed_dict(gp, False))
             devel_writer.add_summary(summary, i)
             print('Accuracy at step %s: %s' % (i, acc))
@@ -657,7 +657,7 @@ def train(gp, ip, x_train, y_train, x_test, y_test):
             else:  # Record a summary
                 summary, _ = sess.run([merged, train_step], feed_dict=feed_dict(gp,True))
                 train_writer.add_summary(summary, i)
-        if i==ip.max_steps-1:
+        if i==ip.max_steps:
             summary, acc, y, y_ = sess.run([merged, accuracy, y, y_], feed_dict=feed_dict(gp, False))
             ysoft= tf.nn.softmax(tf.transpose(y))
             
@@ -752,6 +752,7 @@ class InputParameters:
         parser.add_argument('--max_steps', type=int, dest="max_steps", default=2000, help='Number of steps to run trainer.')
         parser.add_argument('--learning_rate', type=float, dest="learning_rate", default=0.0001, help='Initial learning rate')
         parser.add_argument('--optimizer', type=str, dest="optimizer", default="Adam", help='Optimizer to use, choice among: Adam, GraDe, Adagrad')
+        parser.add_argument('--makeplots', type=int, dest="makeplots", default=0, help='Whether to generate observables scatter plots')
 
         args            = parser.parse_args()
         #self.mode       = args.MODE
@@ -769,6 +770,7 @@ class InputParameters:
         self.max_steps       = args.max_steps
         self.learning_rate   = args.learning_rate
         self.optimizer       = args.optimizer
+        self.makeplots       = args.makeplots
         
         #if self.outfolder:
             #if not os.path.isdir(self.outfolder):
