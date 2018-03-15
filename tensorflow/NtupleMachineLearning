@@ -243,8 +243,11 @@ def makeplot(title, x, weights, ggf_size, y):
 
     plt.show()
 
-def make2dplot(observables, data, ggf_size, tot_size):
+def make2dplot(ip, observables, data, ggf_size, tot_size):
+    """
 
+
+    """
     plt.rc('text', usetex=True)
     plt.rc('font', family='serif')
 
@@ -257,25 +260,30 @@ def make2dplot(observables, data, ggf_size, tot_size):
                   "yj2": "$y_{j_{2}}$",
                   "yjj": "$y_{j_{1}j_{2}}$",
                   "zstar": "$z^{\star}$",
+                  "zstar3j": "$z^{\star}_{3j}$",
                   "Rptjet": "$R_{p_{t,\,j}}$",
-                  "ME": "ME"}
-    
+                  "ME": "Matrix element"}
+
     for j in range(0, len(observables)):
-        plt.figure(j+1, figsize=(18,8))
+        plt.figure(j+1, figsize=(15,10))
         k=0
         for i in range(0, len(observables)):
             if i == j:
                 continue
             k+=1
-            plt.subplot(2,5,k)
+            ax=plt.subplot(3,4,k)
             plt.plot(data[j, 0:ggf_size], data[i, 0:ggf_size], 'r.', label='GGF', markersize=1)
             plt.plot(data[j, ggf_size:tot_size], data[i, ggf_size:tot_size], 'b.', label='VBF', markersize=1)
             plt.xlabel(r""+obs_to_label[observables[j]]+"")
             plt.ylabel(r""+obs_to_label[observables[i]]+"")
+            if observables[j] in ["pth", "ptj1", "ptj2", "mjj", "ME"]:
+                ax.set_xscale("log")
+            if observables[i] in ["pth", "ptj1", "ptj2", "mjj", "ME"]:
+                ax.set_yscale("log")
             plt.title(r"Plot: "+obs_to_label[observables[j]]+" vs. "+obs_to_label[observables[i]])
             plt.legend(loc='best', ncol=1)
         plt.tight_layout()
-        plt.savefig('Figure'+str(j+1)+'.png')
+        plt.savefig('Figure_'+str(ip.multip)+'j_'+str(j+1)+'.png')
     #plt.show()
 
 
@@ -436,10 +444,12 @@ def main(ip):
     print(" Size of ggf training sample: %i events" % ggf_size)
     print(" Size of vbf training sample: %i events" % vbf_size)
 
-    if ip.makeplots:
-        make2dplot(["pth","ptj1","ptj2","mjj","dphijj","yj1","yj2","yjj","zstar","Rptjet","ME"], x_train, ggf_size, gp._num_examples)
+    if ip.makeplots and ip.multip == 2:
+        make2dplot(ip, ["pth","ptj1","ptj2","mjj","dphijj","yj1","yj2","yjj","zstar","Rptjet","ME"], x_train, ggf_size, gp._num_examples)
+    if ip.makeplots and ip.multip == 3:
+        make2dplot(ip, ["pth","ptj1","ptj2","mjj","dphijj","yj1","yj2","yjj","zstar","Rptjet", "zstar3j", "ME"], x_train, ggf_size, gp._num_examples)
 
-    #x_train_norm = normalize_input(x_train)
+    x_train_norm = normalize_input(x_train)
     
     print "--> Load development data ..."
 
@@ -448,10 +458,10 @@ def main(ip):
     print(" Size of ggf develop sample: %i events" % ggf_size)
     print(" Size of vbf develop sample: %i events" % vbf_size)
 
-    #x_devel_norm = normalize_input(x_devel)
+    x_devel_norm = normalize_input(x_devel)
 
-    y_final=train(gp, ip, x_train, y_train, x_devel, y_devel)
-    #y_final=train(gp, ip, x_train_norm.T, y_train.T, x_devel_norm.T, y_devel.T)
+    #y_final=train(gp, ip, x_train, y_train, x_devel, y_devel)
+    y_final=train(gp, ip, x_train_norm, y_train, x_devel_norm, y_devel)
     
     y_rewrite=[]
     proc_ind = tf.InteractiveSession().run(tf.argmax(y_final, 1))
