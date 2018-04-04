@@ -170,6 +170,7 @@ class TSelectorMain
   vector<Double_t> dphijj;
   vector<Double_t> yj1;    
   vector<Double_t> yj2;
+  vector<Double_t> yj3;
   vector<Double_t> yjj;    
   vector<Double_t> zstar;
   vector<Double_t> zstarj3;

@@ -159,9 +159,22 @@ void TSelectorAnalyzer::TestAnalysis()
   PseudoJetVector unsortedjets = cs.inclusive_jets(jet_ptmin);
   PseudoJetVector jets = fastjet::sorted_by_pt(unsortedjets);
 
+  // Multiplicity:
   //std::cout<<"----> "<<multip<<std::endl;
 
-  if (jets.size() >= multip && m_inv(jets[0],jets[1])>400.0 && abs(jets[0].rap()-jets[1].rap())>2.8){
+  bool accept_event = false;
+  // Apply cuts:
+  // multiplicity
+  if (jets.size() >= multip) accept_event = true;
+  if (accept_event){
+    // rapidity
+    for(unsigned i=0; i<jets.size(); i++){
+      if (jets[i].rap() > 4.5 ) accept_event = false;
+    }
+    // VBF mjj
+    if (m_inv(jets[0],jets[1]) < 400.0 || abs(jets[0].rap()-jets[1].rap()) < 2.8) accept_event = false;
+  }
+  if (accept_event){
    //returning Higgs pT
    pth.push_back(particles[2].pt());      
    //returning leading and subleading jet pT
@@ -176,6 +189,7 @@ void TSelectorAnalyzer::TestAnalysis()
    zstar.push_back(abs(particles[2].rap()-(jets[0].rap()+jets[1].rap())/2.0)/abs(jets[0].rap()-jets[1].rap()));
 
    if (multip == 3){
+     yj3.push_back(jets[2].rap());
      zstarj3.push_back((jets[2].rap()-(jets[0].rap()+jets[1].rap())/2.0)/abs(jets[0].rap()-jets[1].rap()));
    }
 
